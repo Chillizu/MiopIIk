@@ -29,7 +29,7 @@
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
 | D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
-| D19 | 模型路由（**待验证假设**）：审查/规划强模型、执行/监督廉价模型——沿用 OMP 直觉，但漏报率/rewind 率无量化门；降级为待验证，预注册实验见 [model-routing-experiment](docs/design/model-routing-experiment.md) | [architecture-3-layer](docs/design/architecture-3-layer.md) |
+| D19 | 模型路由（**待验证假设**）：审查/规划强模型、执行/监督廉价模型——沿用 OMP 直觉，但漏报率/rewind 率无量化门；降级为待验证，预注册实验见 [model-routing-experiment](docs/design/model-routing-experiment.md)。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D20 | 后台任务对齐 DSH jobs（job_list/output/kill + run_in_background）；长任务强制详细日志 + 结束 flag + ETA | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D21 | 计划树工作流：大项目先建树（第一层计划 / 第二层文档参考+对话记录简述 / 第三层设计细则），本树即约定实例 | [plan-tree-workflow](docs/design/plan-tree-workflow.md) |
 | D22 | 简洁原则：后期插件实现时，提示词（特别是提示词）与代码必须保持简洁——只给事实与验收，不给方法说教 | 全树适用 + [lsp-extension](docs/design/lsp-extension.md) §6 |
@@ -77,7 +77,6 @@
 | U1 | 监督层拓扑 | 规划层的 continuable 子（send_message/report 原生双向）；备选：审查层的子（需转发，不推荐） |
 | U2 | spike：子代理能否用 session_query 读父会话日志（授权规则实测） | 已实测（2026-08-14，见 [runbook §5.1](docs/design/phase1-runbook.md#51-实测记录2026-08-14阶段一验收样例判定--中间档)）：当时 session_search 被部署级禁用 → 两通道兜底；**现已启用全文搜索**（profile patch `openAt: first-search`，实测 20 hits），recall 三通道恢复 |
 | U3 | 授权闸实现方式 | 一期 prompt 规则（派发前确认）；二期评估接 DSH 审批 seam |
-| U4 | 审查层 model 档位 | 默认 pro（D19 原意：审查/规划强模型）；备选 flash（省钱优先，planner=pro 兜底规划质量）——待用户拍板 |
 
 ## 5. 下一步（实施进度）
 
