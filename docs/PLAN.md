@@ -77,6 +77,7 @@
 | U1 | 监督层拓扑 | 规划层的 continuable 子（send_message/report 原生双向）；备选：审查层的子（需转发，不推荐） |
 | U2 | spike：子代理能否用 session_query 读父会话日志（授权规则实测） | 已实测（2026-08-14，见 [runbook §5.1](docs/design/phase1-runbook.md#51-实测记录2026-08-14阶段一验收样例判定--中间档)）：当时 session_search 被部署级禁用 → 两通道兜底；**现已启用全文搜索**（profile patch `openAt: first-search`，实测 20 hits），recall 三通道恢复 |
 | U3 | 授权闸实现方式 | 一期 prompt 规则（派发前确认）；二期评估接 DSH 审批 seam |
+| U4 | 审查层 model 档位 | 默认 pro（D19 原意：审查/规划强模型）；备选 flash（省钱优先，planner=pro 兜底规划质量）——待用户拍板 |
 
 ## 5. 下一步（实施进度）
 
@@ -90,11 +91,12 @@
 7. **审查层监督模型**（D28）：用户即顶层监督者 + 审查层自 checkpoint（写入 persona + architecture §2）✓
 8. **冷会话 rewind 实测**（D13）：真实冷会话 readFrom + create(seed) 跑通（775 事件 → 边界 774 → seed 775 → 子会话）✓
 9. **checkpoint 并发写锁**：CAS（replaceIfVersion）+ 冲突重试，杜绝并发写覆盖 ✓
+10. **recall 全文搜索验证**（D12）：重启 dsh web 后 session_search 实测 2 hits ✓
+11. **模型授权闸**（D30）：subagent 模型 ∈ 授权集（默认 ∪ allowlist），闸在 agent/request 全局 waterfall，28 单测过 ✓
+12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
 
 待办（用户门控，需重启/实测）：
-- recall 全文搜索**重启 dsh web 后验证**（session_search/session_trace 可用）；
-- D29 模型路由实验（D19 待验证假设）：跑预注册实验 → 回写 D19 状态；
-- 语义检索（bge-m3 嵌入）弃用。
+- D29 模型路由实验（D19 待验证假设）：跑预注册实验 → 回写 D19 状态。
 
 ## 6. 维护规则
 
