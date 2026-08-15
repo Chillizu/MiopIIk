@@ -7,7 +7,7 @@
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
 
-## 2. 已确认决策（D1–D29）
+## 2. 已确认决策（D1–D30）
 
 | # | 决策 | 详情文档 |
 |---|---|---|
@@ -68,7 +68,7 @@
 | 第三层·设计 | [docs/design/model-auth.md](docs/design/model-auth.md) | 模型授权闸设计（D30：资源对象授权 + agent/request 全局闸点） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
-| 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D29 + 文档一致性）+ 5 漂移修复 + 新缺口清单（learn/model-auth/skill 噪音/离线降级） |
+| 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D30 + 文档一致性）+ 5 漂移修复 + 缺口清单（learn/model-auth 已落地，离线降级仍缝） |
 
 ## 4. 待确认项（U1–U3）
 
