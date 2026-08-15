@@ -24,7 +24,7 @@
 ## 3. Hook 插件设计（S3）
 
 - 挂点：`user/message`（或 `agent/pre-step`）监听器；
-- 检测：按 OMP markdown-prose 排除规则在正文文本中匹配三个关键词；
+- 检测：按 OMP markdown-prose 排除规则在正文文本中匹配 **ultrathink / workflowz**（两个 hook 关键词；orchestrate 走 persona 常驻，不经 hook）；
 - 注入：命中的 turn 注入对应 notice 段落（系统提示词 section，order 对齐 preset）；
 - 范围：宿主组合 or preset 级均可；notice 文本从 OMP `*-notice.md` 移植改写（保留规则原文精神）。
 
@@ -46,5 +46,5 @@
 
 ## 5. 验收标准（本包）
 
-- PASS：三个关键词在正文触发、在代码块/路径中不触发；orchestrate 常驻段让规划层禁止串行派发；
+- PASS：ultrathink/workflowz 在正文触发、在代码块/路径中不触发；orchestrate 常驻段让规划层禁止串行派发；
 - KILL：关键词误触发导致执行层收到编排契约（执行层必须无注入）。

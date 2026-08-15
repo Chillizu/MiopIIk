@@ -1,10 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-const { apply } = await import('../packages/mop-tool-recovery/index.js')
+const { apply, formatCheckpointLine, parseCheckpointLine, lastTurnEndSeq } =
+  await import('../packages/mop-tool-recovery/index.js')
 
-function makeCtx() {
+function makeCtx(overrides = {}) {
   const registered = []
+  const writes = []
+  const creates = []
   const ctx = {
     tools: {
       register: (tool) => {
@@ -13,19 +16,28 @@ function makeCtx() {
     },
     fs: {
       resolve: async () => ({}),
+      stat: async () => ({}),
       readText: async () => '',
-      writeText: async () => {},
+      writeText: async (_t, content) => {
+        writes.push(content)
+      },
     },
     systemPrompt: { section: () => () => {} },
     sandboxPolicy: { resolve: () => ({}) },
     sessions: {
       get: () => undefined,
-      fork: () => ({ id: 'child-1' }),
-      create: () => ({ id: 'child-1' }),
+      fork: () => ({ id: 'child-hot' }),
+      create: (_id, opts) => {
+        creates.push(opts)
+        return { id: 'child-cold' }
+      },
     },
-    sessionPersistence: { readFrom: async () => ({ meta: {}, events: [] }) },
+    sessionPersistence: {
+      readFrom: async () => ({ meta: {}, events: [] }),
+    },
+    ...overrides,
   }
-  return { ctx, registered }
+  return { ctx, registered, writes, creates }
 }
 
 function agent(id) {
@@ -60,4 +72,104 @@ test('rule state is session-scoped', () => {
     show.execute({}, { agent: agent('session-b') }),
     '(no rule injected)',
   )
+})
+
+test('checkpoint line round-trips (golden fixture)', () => {
+  const golden =
+    '- [2026-01-01T00:00:00.000Z] milestone | session=sess-1 | seq=42 | git@abc1234'
+  assert.deepEqual(parseCheckpointLine(golden), {
+    label: 'milestone',
+    session: 'sess-1',
+    seq: 42,
+    note: 'git@abc1234',
+  })
+  const line = formatCheckpointLine('milestone', 'sess-1', 42, 'git@abc1234')
+  const parsed = parseCheckpointLine(line)
+  assert.equal(parsed.label, 'milestone')
+  assert.equal(parsed.session, 'sess-1')
+  assert.equal(parsed.seq, 42)
+  assert.equal(parsed.note, 'git@abc1234')
+})
+
+test('parseCheckpointLine does not substring-match labels', () => {
+  const line = formatCheckpointLine('v1-final', 'sess-1', 1, undefined)
+  assert.equal(parseCheckpointLine(line).label, 'v1-final')
+  assert.notEqual(parseCheckpointLine(line).label, 'v1')
+})
+
+test('lastTurnEndSeq finds the last turn/end boundary', () => {
+  const events = [
+    { type: 'turn/start', seq: 0 },
+    { type: 'turn/end', seq: 3 },
+    { type: 'turn/start', seq: 4 },
+    { type: 'turn/end', seq: 7 },
+  ]
+  assert.equal(lastTurnEndSeq(events), 7)
+  assert.equal(lastTurnEndSeq([]), 0)
+})
+
+test('cold rewind seeds through the inclusive boundary and passes meta', async () => {
+  const events = [
+    { type: 'turn/start', seq: 0 },
+    { type: 'tool/call', seq: 1 },
+    { type: 'tool/result', seq: 2 },
+    { type: 'turn/end', seq: 3 },
+    { type: 'turn/start', seq: 4 },
+    { type: 'tool/call', seq: 5 },
+    { type: 'tool/result', seq: 6 },
+    { type: 'turn/end', seq: 7 },
+  ]
+  const { ctx, registered, creates } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => ({}),
+      readText: async () =>
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-1 | seq=7\n',
+      writeText: async () => {},
+    },
+    sessionPersistence: {
+      readFrom: async () => ({ meta: { cwd: '/proj' }, events }),
+    },
+  })
+  apply(ctx)
+  const rewind = registered.find((t) => t.name === 'mop_rewind')
+  const result = await rewind.execute(
+    { sessionId: 'sess-cold', label: 'milestone' },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /cold/)
+  assert.equal(creates.length, 1)
+  assert.equal(creates[0].seed.length, 8) // events[0..7] inclusive
+  assert.equal(creates[0].meta.parentSession, 'sess-cold')
+  assert.equal(creates[0].meta.cwd, '/proj')
+  assert.equal(creates[0].meta.seedLength, 8)
+})
+
+test('hot rewind uses sessions.fork', async () => {
+  const forked = []
+  const { ctx, registered } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => ({}),
+      readText: async () =>
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-1 | seq=3\n',
+      writeText: async () => {},
+    },
+    sessions: {
+      get: (id) => (id === 'sess-hot' ? { events: [] } : undefined),
+      fork: (sid, seq) => {
+        forked.push({ sid, seq })
+        return { id: 'child-hot' }
+      },
+      create: () => ({ id: 'child-cold' }),
+    },
+  })
+  apply(ctx)
+  const rewind = registered.find((t) => t.name === 'mop_rewind')
+  const result = await rewind.execute(
+    { sessionId: 'sess-hot', label: 'milestone' },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /hot/)
+  assert.deepEqual(forked, [{ sid: 'sess-hot', seq: 3 }])
 })

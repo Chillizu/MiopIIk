@@ -7,7 +7,7 @@
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
 
-## 2. 已确认决策（D1–D24）
+## 2. 已确认决策（D1–D26）
 
 | # | 决策 | 详情文档 |
 |---|---|---|
@@ -25,7 +25,7 @@
 | D12 | 记忆三级：全局记忆（用户偏好/系统信息/系统级改动）、项目记忆（进展/思路/长期需求）、recall（= DSH session_search 家族）；一期零新工具 | [memory-design](docs/design/memory-design.md) |
 | D13 | 恢复工具包：`/retry`、请求级自动重试策略、`checkpoint`、`rewind`（fork 无损回溯）、规则注入 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
 | D14 | 恢复工具与会话管理（fork/rewind）UI 落位：Web GUI「轨迹」页面 | 同上 |
-| D15 | 魔法关键词 ultrathink / orchestrate / workflowz 移植（hook 检测 + notice 段落注入） | [magic-keywords](docs/design/magic-keywords.md) |
+| D15 | 魔法关键词：hook 检测 **ultrathink / workflowz**（正文散文）注入 notice；**orchestrate** 为规划层 persona 常驻契约段落（非 hook 触发） | [magic-keywords](docs/design/magic-keywords.md) |
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
 | D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
@@ -43,11 +43,8 @@
 | 层级 | 文件 | 职责 |
 |---|---|---|
 | 第一层 | [PLAN.md](PLAN.md) | 总计划树根：目标、决策、索引、待确认项 |
-| 第二层·文档参考 | [docs/research/omp-report.md](docs/research/omp-report.md) | OMP 完整调研（loop/特色/工具/命令全表） |
-| 第二层·文档参考 | [docs/research/dsh-report.md](docs/research/dsh-report.md) | DSH 调研（设计理念/插件哲学/自带功能） |
-| 第二层·文档参考 | [docs/research/omp-vs-dsh.md](docs/research/omp-vs-dsh.md) | 对照表 + 迁移三桶清单 + 自建清单 |
-| 第二层·对话记录 | [docs/profile/conversation-notes.md](docs/profile/conversation-notes.md) | 本会话历轮简述 + 9 组 OMP 会话分析摘要 |
-| 第二层·对话记录 | [docs/profile/user-preference-profile.md](docs/profile/user-preference-profile.md) | 用户偏好画像（六节，带证据） |
+| 第二层·文档参考 | docs/research/*（omp-report / dsh-report / omp-vs-dsh） | 本地保留，不入库（OMP/DSH 调研） |
+| 第二层·对话记录 | docs/profile/*（conversation-notes / user-preference-profile） | 本地保留，不入库（会话记录 + 用户画像） |
 | 第三层·设计 | [docs/design/architecture-3-layer.md](docs/design/architecture-3-layer.md) | 三层+监督层架构细则 |
 | 第三层·设计 | [docs/design/communication-protocol.md](docs/design/communication-protocol.md) | 通信拓扑与消息模板 |
 | 第三层·设计 | [docs/design/memory-design.md](docs/design/memory-design.md) | 记忆分级 spec |

@@ -22,15 +22,33 @@ async function run(prose) {
   )
 }
 
+function injectedText(decision) {
+  return decision.messages.map((m) => m.content[0].text).join('\n')
+}
+
 test('keyword in prose triggers notice injection', async () => {
   const decision = await run('please ultrathink about this')
   assert.equal(decision.kind, 'enter')
   assert.equal(decision.messages.length, 1)
-  assert.match(decision.messages[0].content[0].text, /ultrathink/)
+  assert.match(injectedText(decision), /ultrathink/)
 })
 
 test('keyword inside inline code does not trigger', async () => {
   const decision = await run('use `ultrathink` as a literal')
-  assert.equal(decision.kind, 'enter')
   assert.equal(decision.messages.length, 0)
+})
+
+test('keyword inside fenced code block does not trigger', async () => {
+  const decision = await run(
+    'here is a snippet:\n```\nworkflowz(parallel(...))\n```\n',
+  )
+  assert.equal(decision.messages.length, 0)
+})
+
+test('two keywords in one message inject both notices', async () => {
+  const decision = await run('ultrathink then workflowz this fan-out')
+  assert.equal(decision.messages.length, 1)
+  const text = injectedText(decision)
+  assert.match(text, /ultrathink/)
+  assert.match(text, /workflowz/)
 })

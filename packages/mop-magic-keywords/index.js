@@ -14,7 +14,7 @@ function textOf(messages) {
   for (const m of messages) {
     if (!m || m.role !== 'user') continue
     for (const b of m.content || []) {
-      if (b && b.type === 'text') out += b.text + '\n'
+      if (b && b.type === 'text') out += `${b.text}\n`
     }
   }
   return out
@@ -40,7 +40,7 @@ export function apply(ctx) {
         kind: 'plugin',
         plugin: 'mop-magic-keywords',
         form: 'notice',
-        summary: 'magic keyword: ' + hits.join(', '),
+        summary: `magic keyword: ${hits.join(', ')}`,
       },
     })
     return { kind: 'enter', messages: [...decision.messages, msg] }

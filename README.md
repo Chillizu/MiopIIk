@@ -17,11 +17,11 @@ MiOpIIk 的 DeepSeek Harness 插件集。命名遵循 DSH 插件约定：包 `@c
 ```yaml
 # ── recovery tools ──
 - id: mop-tool-recovery
-  name: /home/<user>/.dsh/profiles/mop-tool-recovery/index.js
+  name: ${DSH_HOME}/profiles/mop-tool-recovery/index.js # 或 $HOME/.dsh/...（绝对路径）
 
 # ── magic keywords ──
 - id: mop-magic-keywords
-  name: /home/<user>/.dsh/profiles/mop-magic-keywords/index.js
+  name: ${DSH_HOME}/profiles/mop-magic-keywords/index.js
 ```
 
 3. `dsh` 重启后 `standingKeyFor` 挂载验证。
