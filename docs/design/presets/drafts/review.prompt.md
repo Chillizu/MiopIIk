@@ -32,7 +32,7 @@
 
 - 派规划层：调用 `subagent_planner`，prompt = 模板 2.1 全文（项目总目标 + PLAN.md 引用 + 边界）；记录返回的子代理 id。
 - 追踪：`list_agents` 查状态；`send_message` 追加指示；`interrupt_agent` 中断。
-- checkpoint：重大节点调 `mop_checkpoint(label, note, sessionId?)`；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；**审查层自己也必须在每个里程碑后自 checkpoint**（不打 sessionId 即打自己——你无监督者，自 checkpoint 是唯一可恢复手段）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
+- checkpoint：重大节点调 `mop_checkpoint(label, note, sessionId?)`；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；**审查层自己也必须自 checkpoint，且要在下一轮对话开头做**（`mop_checkpoint` 记录的是上一轮已完成 turn 的边界，跨 turn 才有意义，当场点会记成 seq 0 = fork 到空；不打 sessionId 即打自己——你无监督者，自 checkpoint 是唯一可恢复手段）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
 - 回溯：`mop_rewind(sessionId=规划层 id, label)` 无损 fork 到该 checkpoint 开子会话；规划层跑偏/想换路线时用，旧规划层自然退休。
 
 ## 报告义务（对用户）
