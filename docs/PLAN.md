@@ -40,6 +40,7 @@
 | D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
 | D29 | D19 模型路由实验（类型：实验；状态：待验证；证据：预注册骨架）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率，量化门见 [model-routing-experiment](docs/design/model-routing-experiment.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
+| D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
 
 ## 3. 计划树索引
 
@@ -64,6 +65,7 @@
 | 第三层·设计 | [docs/design/lsp-extension.md](docs/design/lsp-extension.md) | 动态 LSP 扩展设计（可选 S9） |
 | 第三层·设计 | [docs/design/capabilities.md](docs/design/capabilities.md) | 能力探测设计（D27：seam 可用性清单，防上游漂移） |
 | 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 待验证假设的预注册实验） |
+| 第三层·设计 | [docs/design/model-auth.md](docs/design/model-auth.md) | 模型授权闸设计（D30：资源对象授权 + agent/request 全局闸点） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
 | 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D29 + 文档一致性）+ 5 漂移修复 + 新缺口清单（learn/model-auth/skill 噪音/离线降级） |
