@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -39,7 +39,10 @@ test('闸：subagent + 默认模型放行', async () => {
     { agent: subagent() },
     async () => ({ provider: 'deepseek-official', model: 'deepseek-v4-flash' }),
   )
-  assert.deepEqual(config, { provider: 'deepseek-official', model: 'deepseek-v4-flash' })
+  assert.deepEqual(config, {
+    provider: 'deepseek-official',
+    model: 'deepseek-v4-flash',
+  })
 })
 
 test('闸：subagent + allowlist 模型放行', async () => {
@@ -55,10 +58,10 @@ test('闸：subagent + 未授权模型 throw', async () => {
   const { listeners } = await withCtx()
   await assert.rejects(
     () =>
-      listeners['agent/request'](
-        { agent: subagent() },
-        async () => ({ provider: 'kimi-coding', model: 'kimi-for-coding' }),
-      ),
+      listeners['agent/request']({ agent: subagent() }, async () => ({
+        provider: 'kimi-coding',
+        model: 'kimi-for-coding',
+      })),
     /未授权模型 kimi-coding\/kimi-for-coding/,
   )
 })
@@ -94,7 +97,10 @@ test('mop_model_authorize 追加 allowlist', async () => {
 
 test('mop_model_authorize 幂等', async () => {
   const { tools } = await withCtx({ allowlist: 'a/b\n' })
-  const out = await tools['mop_model_authorize'].execute({ provider: 'a', model: 'b' })
+  const out = await tools['mop_model_authorize'].execute({
+    provider: 'a',
+    model: 'b',
+  })
   assert.match(out, /already authorized/)
 })
 
@@ -107,7 +113,9 @@ test('mop_model_authorize 拒绝空参数', async () => {
 })
 
 test('mop_model_list 显示默认 + allowlist', async () => {
-  const { tools } = await withCtx({ allowlist: 'deepseek-official/deepseek-v4-pro\n' })
+  const { tools } = await withCtx({
+    allowlist: 'deepseek-official/deepseek-v4-pro\n',
+  })
   const out = await tools['mop_model_list'].execute()
   assert.match(out, /默认模型: deepseek-official\/deepseek-v4-flash/)
   assert.match(out, /deepseek-official\/deepseek-v4-pro/)

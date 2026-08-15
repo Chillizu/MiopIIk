@@ -14,14 +14,20 @@ test('mop_learn mints a SKILL.md with frontmatter', async () => {
     tools: { register: (t) => registered.push(t) },
     fs: {
       resolve: async (path) => ({ path }),
-      writeText: async (_t, content) => { writes.push({ content }) },
+      writeText: async (_t, content) => {
+        writes.push({ content })
+      },
     },
     sandboxPolicy: { resolve: () => ({}) },
   }
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_learn')
   const result = await tool.execute(
-    { name: 'deploy-check', description: 'Pre-deploy checks', content: '## Steps\n1. run tests' },
+    {
+      name: 'deploy-check',
+      description: 'Pre-deploy checks',
+      content: '## Steps\n1. run tests',
+    },
     { agent: agent() },
   )
   assert.match(result, /skill minted/)
@@ -39,6 +45,20 @@ test('mop_learn rejects invalid name / empty fields', async () => {
   }
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_learn')
-  await assert.rejects(() => tool.execute({ name: 'Bad Name', description: 'x', content: 'y' }, { agent: agent() }), /invalid skill name/)
-  await assert.rejects(() => tool.execute({ name: 'ok', description: '  ', content: 'y' }, { agent: agent() }), /description required/)
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { name: 'Bad Name', description: 'x', content: 'y' },
+        { agent: agent() },
+      ),
+    /invalid skill name/,
+  )
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { name: 'ok', description: '  ', content: 'y' },
+        { agent: agent() },
+      ),
+    /description required/,
+  )
 })

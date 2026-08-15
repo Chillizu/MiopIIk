@@ -6,7 +6,7 @@
 
 | 状态 | 决策 |
 |---|---|
-| 已落地（代码/实测） | D1–D13、D15、D20、D21、D25–D28（除 D14/D23） |
+| 已落地（代码/实测） | D1–D13、D15、D20、D21、D25–D28、D30（除 D14/D23） |
 | 待验证（预注册实验已冻结） | D19（→ D29）、D29 |
 | 弃用/降级 | D14（UI 按钮方向，fork=新会话做不出就地回退）、D13 内 `/retry`（自动重试=原生） |
 | 未做/可选 | D23（动态 LSP，S9 可选）、D18（run-stats 原生已覆盖，无自建） |
@@ -36,8 +36,8 @@
 
 1. **learn 机制缺失 → 已补**：D12 明确「learn（通用事实）vs skill（可复用流程）分流」，DSH 只有 skill 文件发现 + 加载，无结构化铸 skill 入口——已落地 `mop_learn`（写 `.dsh/skills/<name>/SKILL.md`，frontmatter name+description + body，19 单测过）。
 2. **skill catalog 噪音 → 定性修正**：16 skill 中 14 个 AWS 系是**用户自己的全局库**（`~/.agents/skills/`，user-agents source），非 DSH 注入噪音；`disable-model-invocation` 只能全局、不能按 preset 隐藏——故瘦身 = 描述上限 500→100（`catalogDescriptionMaxLength: 100`，已落 miopiik tool-skill 行），AWS 库保留。
-3. **模型授权闸缺失**：模型路由落在「没额度/昂贵」provider（如 kimi 配额耗尽）时无闸拦截，subagent 静默失败——待补 model allowlist 硬闸（本次 kimi 403 是实证）。
+3. **模型授权闸缺失 → 已补（D30）**：模型路由落在「没额度/昂贵」provider（如 kimi 配额耗尽）时无闸拦截，subagent 静默失败——已落地 `mop-model-auth`（subagent 模型 ∈ 授权集 = 默认 ∪ allowlist，闸在 `agent/request` 全局 waterfall，覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径；`mop_model_authorize`/`mop_model_list` 管理，28 单测过）。
 
 ## 5. 一句话结论
 
-哲学骨架自洽且已从「文档成熟、代码滞后」追平到「代码与文档同频」；剩余两缝是**性质上需要新机制**的（模型授权 / 离线降级），不是补丁能补的——按 D22 只做模型授权，离线降级留待真有无人值守场景再设计。
+哲学骨架自洽且已从「文档成熟、代码滞后」追平到「代码与文档同频」；剩余一缝是**性质上需要新机制**的（离线降级），不是补丁能补的——留待真有无人值守场景再设计。

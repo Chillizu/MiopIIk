@@ -80,7 +80,8 @@ export function apply(ctx) {
       async execute(args) {
         const provider = (args.provider || '').trim()
         const model = (args.model || '').trim()
-        if (!provider || !model) throw new Error('mop_model_authorize: provider 和 model 必填')
+        if (!provider || !model)
+          throw new Error('mop_model_authorize: provider 和 model 必填')
         const key = `${provider}/${model}`
         const set = await loadAllowlist()
         if (set.has(key)) return `already authorized: ${key}`
@@ -109,7 +110,10 @@ export function apply(ctx) {
       output: stringOutput,
       async execute() {
         const set = await loadAllowlist()
-        const lines = [`默认模型: ${defaultKey() ?? '(无)'}`, `已授权 (${set.size}):`]
+        const lines = [
+          `默认模型: ${defaultKey() ?? '(无)'}`,
+          `已授权 (${set.size}):`,
+        ]
         for (const k of [...set].sort()) lines.push(`- ${k}`)
         return lines.join('\n')
       },

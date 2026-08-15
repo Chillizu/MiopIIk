@@ -26,11 +26,19 @@ export function apply(ctx) {
       async execute(args, exec) {
         const name = (args.name || '').trim()
         if (!NAME_RE.test(name))
-          throw new Error(`mop_learn: invalid skill name "${name}" (kebab-case, no leading hyphen)`)
-        if (!(args.description || '').trim()) throw new Error('mop_learn: description required')
-        if (!(args.content || '').trim()) throw new Error('mop_learn: content required')
+          throw new Error(
+            `mop_learn: invalid skill name "${name}" (kebab-case, no leading hyphen)`,
+          )
+        if (!(args.description || '').trim())
+          throw new Error('mop_learn: description required')
+        if (!(args.content || '').trim())
+          throw new Error('mop_learn: content required')
         const agent = exec.agent
-        const cwd = agent && agent.session && agent.session.header && agent.session.header.cwd
+        const cwd =
+          agent &&
+          agent.session &&
+          agent.session.header &&
+          agent.session.header.cwd
         if (!cwd) throw new Error('mop_learn: session cwd unavailable')
         const dir = join(cwd, '.dsh', 'skills', name)
         const body = `---\nname: ${name}\ndescription: ${args.description.trim()}\n---\n\n${args.content.trim()}\n`
