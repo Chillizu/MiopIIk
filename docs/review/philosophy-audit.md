@@ -34,10 +34,10 @@
 
 ## 4. 本轮新发现缺口
 
-1. **learn 机制缺失**：D12 明确「learn（通用事实）vs skill（可复用流程）分流」，OMP 有 `learn` 工具，DSH 只有 skill 文件发现 + 加载，无结构化铸 skill 入口——待补 `mop_learn`。
-2. **skill catalog 噪音**：MiOpIIk 会话注入 16 skill，其中 14 个 AWS 系与项目无关——待按 `source` 瘦身。
+1. **learn 机制缺失 → 已补**：D12 明确「learn（通用事实）vs skill（可复用流程）分流」，DSH 只有 skill 文件发现 + 加载，无结构化铸 skill 入口——已落地 `mop_learn`（写 `.dsh/skills/<name>/SKILL.md`，frontmatter name+description + body，19 单测过）。
+2. **skill catalog 噪音 → 定性修正**：16 skill 中 14 个 AWS 系是**用户自己的全局库**（`~/.agents/skills/`，user-agents source），非 DSH 注入噪音；`disable-model-invocation` 只能全局、不能按 preset 隐藏——故瘦身 = 描述上限 500→100（`catalogDescriptionMaxLength: 100`，已落 miopiik tool-skill 行），AWS 库保留。
 3. **模型授权闸缺失**：模型路由落在「没额度/昂贵」provider（如 kimi 配额耗尽）时无闸拦截，subagent 静默失败——待补 model allowlist 硬闸（本次 kimi 403 是实证）。
 
 ## 5. 一句话结论
 
-哲学骨架自洽且已从「文档成熟、代码滞后」追平到「代码与文档同频」；剩余三缝是**性质上需要新机制**的（learn / 模型授权 / 离线降级），不是补丁能补的——按 D22 只做前两个，离线降级留待真有无人值守场景再设计。
+哲学骨架自洽且已从「文档成熟、代码滞后」追平到「代码与文档同频」；剩余两缝是**性质上需要新机制**的（模型授权 / 离线降级），不是补丁能补的——按 D22 只做模型授权，离线降级留待真有无人值守场景再设计。
