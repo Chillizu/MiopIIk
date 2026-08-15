@@ -59,6 +59,48 @@ async function readExisting(fs, target) {
   return stat === undefined ? '' : await fs.readText(target)
 }
 
+/**
+ * 原子追加一行到 checkpoint 文件：CAS（version）防并发会话写覆盖。
+ * 冲突（FS_STALE_VERSION / FS_NOT_OBSERVED）重试，其余错误照常抛。
+ */
+async function appendCheckpoint(fs, target, line, policy) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const info = await fs.stat(target)
+    if (info === undefined) {
+      try {
+        await fs.writeText(
+          target,
+          line,
+          { kind: 'createIfAbsent' },
+          undefined,
+          policy,
+        )
+        return
+      } catch (error) {
+        if (error && error.code === 'FS_NOT_OBSERVED') continue // 并发创建竞争 → 重试
+        throw error
+      }
+    }
+    const prev = await fs.readText(target)
+    try {
+      await fs.writeText(
+        target,
+        prev + line,
+        { kind: 'replaceIfVersion', version: info.version },
+        undefined,
+        policy,
+      )
+      return
+    } catch (error) {
+      if (error && error.code === 'FS_STALE_VERSION') continue // 并发写冲突 → 重试
+      throw error
+    }
+  }
+  throw new Error(
+    'mop_checkpoint: append failed after retries (concurrent writes)',
+  )
+}
+
 export function apply(ctx) {
   const {
     tools,
@@ -104,11 +146,9 @@ export function apply(ctx) {
         }
         const boundary = lastTurnEndSeq(events)
         const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
-        // TODO: append 是全量重写（read + concat + write），checkpoint 多了后 O(n) 且并发会话写同一文件无锁；短期够用。
-        const prev = await readExisting(fs, target)
         const line = formatCheckpointLine(args.label, sid, boundary, args.note)
         const policy = sandboxPolicy.resolve({ session: agent.session })
-        await fs.writeText(target, prev + line, undefined, undefined, policy)
+        await appendCheckpoint(fs, target, line, policy)
         return `checkpoint OK: ${args.label} @ session ${sid} seq ${boundary}`
       },
     }),

@@ -192,3 +192,35 @@ test('mop_checkpoint_list returns parsed entries', async () => {
   assert.match(result, /a \| session=s1 \| seq=1/)
   assert.match(result, /b \| session=s2 \| seq=2 \| note2/)
 })
+
+test('checkpoint write retries on concurrent version conflict', async () => {
+  let statCalls = 0
+  let writeCalls = 0
+  const expected = []
+  const { ctx, registered } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => {
+        statCalls += 1
+        return { version: statCalls }
+      },
+      readText: async () => '- [t] old | session=s | seq=0\n',
+      writeText: async (_t, _content, exp) => {
+        writeCalls += 1
+        expected.push(exp)
+        if (writeCalls === 1)
+          throw Object.assign(new Error('changed'), {
+            code: 'FS_STALE_VERSION',
+          })
+      },
+    },
+  })
+  apply(ctx)
+  const cp = registered.find((t) => t.name === 'mop_checkpoint')
+  const result = await cp.execute({ label: 'x' }, { agent: agent('session-a') })
+  assert.match(result, /checkpoint OK/)
+  assert.equal(writeCalls, 2) // 第一次冲突，第二次成功
+  assert.equal(expected[0].kind, 'replaceIfVersion')
+  assert.equal(expected[0].version, 1)
+  assert.equal(expected[1].version, 2)
+})

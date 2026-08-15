@@ -84,10 +84,11 @@
 5. **命名约定**（D26）：`@chillizu/mop-<domain>-<feature>` / `mop_<verb>` ✓
 6. **能力探测**（D27）：`@chillizu/mop-capabilities` 探测 seam 可用性 → `.dsh/memory/capabilities.md` ✓
 7. **审查层监督模型**（D28）：用户即顶层监督者 + 审查层自 checkpoint（写入 persona + architecture §2）✓
+8. **冷会话 rewind 实测**（D13）：真实冷会话 readFrom + create(seed) 跑通（775 事件 → 边界 774 → seed 775 → 子会话）✓
+9. **checkpoint 并发写锁**：CAS（replaceIfVersion）+ 冲突重试，杜绝并发写覆盖 ✓
 
 待办（用户门控，需重启/实测）：
 - recall 全文搜索**重启 dsh web 后验证**（session_search/session_trace 可用）；
-- 冷会话 rewind **实测**（需真实 settle 的冷规划层会话）；
 - D29 模型路由实验（D19 待验证假设）：跑预注册实验 → 回写 D19 状态；
 - 语义检索（bge-m3 嵌入）弃用。
 

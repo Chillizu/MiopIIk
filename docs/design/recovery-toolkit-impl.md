@@ -103,4 +103,4 @@
 
 **清理**：动态 `recov-2` 已 undefine，探针 `prset-1` 已停（留定义备将来 preset 校验）。
 
-**遗留**：① 冷会话 rewind（走 sessionPersistence 冷读 + fork，未做）；②「改提示词」fork 到 turn 前（边界未定，defer）；③ 记忆细化（D12，下一阶段）。
+**遗留**：① 冷会话 rewind 已实测（真实冷会话 readFrom + create(seed) 跑通，见 PLAN §5）；②「改提示词」fork 到 turn 前（边界未定，defer）；③ 记忆细化（D12）已完成。
