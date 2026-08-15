@@ -123,7 +123,9 @@ export function apply(ctx) {
       agent.session.header &&
       agent.session.header.delegationDepth
     if (depth !== 0) return
-    writeManifest(agent).catch(() => {})
+    writeManifest(agent).catch((error) => {
+      console.error('mop-capabilities: startup probe failed', error)
+    })
   })
 
   tools.register(

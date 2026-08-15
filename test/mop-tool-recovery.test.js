@@ -50,11 +50,12 @@ function agent(id) {
   }
 }
 
-test('apply registers the four recovery tools', () => {
+test('apply registers the five recovery tools', () => {
   const { ctx, registered } = makeCtx()
   apply(ctx)
   assert.deepEqual(registered.map((t) => t.name).sort(), [
     'mop_checkpoint',
+    'mop_checkpoint_list',
     'mop_rewind',
     'mop_rule_inject',
     'mop_rule_show',
@@ -172,4 +173,22 @@ test('hot rewind uses sessions.fork', async () => {
   )
   assert.match(result, /hot/)
   assert.deepEqual(forked, [{ sid: 'sess-hot', seq: 3 }])
+})
+
+test('mop_checkpoint_list returns parsed entries', async () => {
+  const { ctx, registered } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => ({}),
+      readText: async () =>
+        '- [2026-01-01T00:00:00.000Z] a | session=s1 | seq=1\n' +
+        '- [2026-01-01T00:00:00.000Z] b | session=s2 | seq=2 | note2\n',
+      writeText: async () => {},
+    },
+  })
+  apply(ctx)
+  const list = registered.find((t) => t.name === 'mop_checkpoint_list')
+  const result = await list.execute({}, { agent: agent('session-a') })
+  assert.match(result, /a \| session=s1 \| seq=1/)
+  assert.match(result, /b \| session=s2 \| seq=2 \| note2/)
 })

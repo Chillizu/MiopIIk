@@ -8,8 +8,8 @@
 |---|---|---|---|
 | S1 | 四层 preset | ✓ | 单 preset `miopiik` + 三 delegation 行（D25）；standingKeyFor 通过 |
 | S2 | 通信协议 + 模板 | ✓ | 2.1/2.2/2.3/2.4/2.5 + [EXEC]；phase1/2 实测 |
-| S3 | 魔法关键词 hook | ✗ 殿后 | D15，未开始 |
-| S4 | 恢复工具包 | ✓ | checkpoint/rewind/rule 固化入 miopiik；自动重试=原生 provider；run-stats=原生 trajectory |
+| S3 | 魔法关键词 hook | ✓ | `mop-magic-keywords`：ultrathink/workflowz 正文检测 + orchestrate 常驻 persona |
+| S4 | 恢复工具包 | ✓ | checkpoint/rewind/rule 固化入 miopiik；`/retry` 弃用（自动重试=原生 provider）；run-stats=原生 trajectory |
 | S5 | 分级记忆 | ✓ 一期 | 全局→`~/.dsh/memory/global/` + persona 注入；项目→`.dsh/memory/`；recall 缺口见下 |
 | S6 | 执行/报告模板 | ✓ | 三段式 + [EXEC] + P0–P3 |
 | S7 | run-stats | ✓ 原生 | trajectory `AssistantTimingPanel`（duration/TTFT/Throughput/tokens） |
@@ -31,7 +31,7 @@
 
 ## 3. 剩余缺口（按优先级）
 
-1. **S3 魔法关键词**（D15 殿后）——三个 notice 段落 hook。
+1. **D19 模型路由实验**（D29）——冻结阈值并跑预注册实验。
 2. **recall 自动化**——已启用全文搜索（profile patch `openAt: first-search`，重启生效）；语义检索弃用。
 3. **冷会话 rewind 实测**——已实现（persistence read + seeded create），缺真实冷会话验证。
 4. **retry agent 工具**——UI 方向已弃；自动重试原生；"手动重跑"由审查层直接重发消息，未单列工具（可接受）。

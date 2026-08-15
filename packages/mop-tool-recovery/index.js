@@ -172,6 +172,39 @@ export function apply(ctx) {
 
   tools.register(
     defineTool({
+      name: 'mop_checkpoint_list',
+      description:
+        'List every checkpoint recorded in .dsh/memory/checkpoints.md (label / session / seq / note).',
+      parameters: {},
+      output: stringOutput,
+      async execute(_args, exec) {
+        const agent = exec.agent
+        const cwd =
+          agent &&
+          agent.session &&
+          agent.session.header &&
+          agent.session.header.cwd
+        if (!cwd)
+          throw new Error('mop_checkpoint_list: session cwd unavailable')
+        const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
+        const cp = await readExisting(fs, target)
+        const entries = cp
+          .split('\n')
+          .map(parseCheckpointLine)
+          .filter((e) => e !== null)
+        if (entries.length === 0) return '(no checkpoints)'
+        return entries
+          .map(
+            (e) =>
+              `- ${e.label} | session=${e.session} | seq=${e.seq}${e.note ? ` | ${e.note}` : ''}`,
+          )
+          .join('\n')
+      },
+    }),
+  )
+
+  tools.register(
+    defineTool({
       name: 'mop_rule_inject',
       description:
         'Inject or replace the session hard rule (TTSR-style) as a prompt section, scoped to the calling session.',

@@ -4,9 +4,9 @@
 
 ## 1. 假设
 
-- H1：执行层用廉价模型（deepseek-v4-flash）在固定任务集上的 rewind 率 ≤ X%（阈值待定）；
-- H2：监督层用廉价模型的漏报率 ≤ Z（注入缺陷 N 个，漏报 ≤ Z）；
-- H3：总成本（token + 墙钟）强/弱模型相差 ≥ 预期倍率。
+- H1：执行层用廉价模型（deepseek-v4-flash）在固定任务集上的 rewind 率 ≤ 15%；
+- H2：监督层用廉价模型的漏报率 ≤ 20%（注入缺陷 N 个，漏报 ≤ 0.2N）；
+- H3：总成本（token + 墙钟）flash 至少低于 pro 30%（倍率 ≥ 1.3×）。
 
 ## 2. 方法
 
@@ -18,9 +18,9 @@
 
 | 门 | PASS | KILL |
 |---|---|---|
-| 执行层 rewind 率 | flash ≤ pro + 容差 | flash 显著劣于 pro |
-| 监督漏报率 | 两模型均 ≤ Z | 任一 > Z |
-| 成本 | flash 成本 < pro 成本 | flash 成本 ≥ pro |
+| 执行层 rewind 率 | flash ≤ 15% | flash > 15% 且明显劣于 pro |
+| 监督漏报率 | 两模型均 ≤ 20% | 任一 > 20% |
+| 成本 | flash 成本 ≤ 0.77 × pro 成本 | flash 成本 ≥ pro 成本 |
 
 ## 4. TODO
 
