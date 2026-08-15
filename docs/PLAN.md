@@ -14,7 +14,7 @@
 | D1 | 总体架构 = 三层 + 监督层（审查层 / 规划层 / 执行层 / 监督层） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D2 | 审查层 = 根会话，用户 preset `miopiik`（从 standard copy，persona 行 = 审查层 prompt 全文），直接对话用户 | 同上 |
 | D3 | 规划层 = continuable 后台子代理，由 `subagent_planner` 工具行派发（config.persona = 规划层 prompt 全文 + toolFilter deny 用户直连/ralph/goal/web 工具） | 同上 |
-| D4 | 执行层 = one-shot 子代理，`mop_spawn_executor` 工具行（persona + toolFilter allow 最小集，无 subagent/workflow 工具） | 同上 |
+| D4 | 执行层 = one-shot 子代理，`mop_spawn_executor` 自定义工具（内嵌 persona + toolFilter allow 最小集 + 可指定 model，无 subagent/workflow 工具） | 同上 |
 | D5 | 监督层 = continuable 子代理，`subagent_supervisor` 工具行（persona + 只读 toolFilter），默认拓扑为**规划层的子**；沉默即通过 | 同上 + [通信协议](docs/design/communication-protocol.md) |
 | D6 | 人格映射：全层用 OMP `default.md`（证据优先）；审查层叠加 `pragmatic.md`；弃用 `friendly.md` | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D7 | 通信走 DSH 树形原语：`send_message`（父→子）、`report`（子→父）；无兄弟直连（无 OMP 式 IRC） | [通信协议](docs/design/communication-protocol.md) |
@@ -24,7 +24,7 @@
 | D11 | Subagent 授权闸：派发默认经用户确认，可放行，可场景级禁停（评测场景禁 subagent） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D12 | 记忆三级：全局记忆（用户偏好/系统信息/系统级改动）、项目记忆（进展/思路/长期需求）、recall（= DSH session_search 家族）；一期零新工具 | [memory-design](docs/design/memory-design.md) |
 | D13 | 恢复工具包：`checkpoint` / `rewind`（fork 无损回溯，含冷会话）/ 规则注入；`/retry` **弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
-| D14 | 恢复工具与会话管理（fork/rewind）UI 落位：Web GUI「轨迹」页面 | 同上 |
+| D14 | 恢复工具与会话管理（fork/rewind）UI 落位：Web GUI「轨迹」页面——**按钮方向已弃**（`sessions.fork`=新会话，做不出就地回退）；checkpoint/rewind 收为 agent 工具 | 同上 |
 | D15 | 魔法关键词：hook 检测 **ultrathink / workflowz**（正文散文）注入 notice；**orchestrate** 为规划层 persona 常驻契约段落（非 hook 触发） | [magic-keywords](docs/design/magic-keywords.md) |
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
@@ -35,7 +35,7 @@
 | D22 | 简洁原则：后期插件实现时，提示词（特别是提示词）与代码必须保持简洁——只给事实与验收，不给方法说教 | 全树适用 + [lsp-extension](docs/design/lsp-extension.md) §6 |
 | D23 | 动态 LSP（可选 S9）：在 DSH 既有 lsp seam 上扩展操作（一期 diagnostics+rename），按项目语言动态发现 server | [lsp-extension](docs/design/lsp-extension.md) |
 | D24 | 规划层上下文管理：长命会话挂 DSH 自动压缩（阈值触发 + 工具结果剪枝）；规划层可**自主 compact**（状态折叠：写 [EXEC] 汇总 + 项目记忆落盘 → handoff 新会话续跑）；WATCHDOG 式落盘笔记对抗压缩丢失 | [architecture-3-layer](docs/design/architecture-3-layer.md) §7 |
-| D25 | 落地形态（DSH 机制约束）：**单 preset `miopiik` + 三个 delegation 工具行**；子代理加入父级 preset（无 per-child preset 参数），per-child 角色 = 工具行 config 的 persona 覆盖（shadow `deployment:persona`）+ toolFilter allow/deny；四个 prompt 全文定稿于 presets 目录并嵌入 miopiik 组合 | [architecture-3-layer](docs/design/architecture-3-layer.md) §8 |
+| D25 | 落地形态（DSH 机制约束）：**单 preset `miopiik` + 两 delegation 工具行（planner/supervisor）+ `mop_spawn_executor` 灵活执行层**；子代理加入父级 preset（无 per-child preset 参数），planner/supervisor 用工具行 config 的 persona 覆盖 + toolFilter；executor 用 mop_spawn_executor（内嵌 persona/toolFilter + 可指定 model） | [architecture-3-layer](docs/design/architecture-3-layer.md) §8 |
 | D26 | 命名约定：MiOpIIk 自建包用 `@chillizu/mop-<domain>-<feature>`（mop = MiOpIIk 域，对应 DSH 的 dsh-）；插件 name = `mop-<domain>-<feature>`；模型工具名 = `mop_<verb>`（下划线）；组合行 id 与插件 name 一致 | 全树适用 |
 | D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
@@ -52,7 +52,8 @@
 | 第三层·设计 | [docs/design/communication-protocol.md](docs/design/communication-protocol.md) | 通信拓扑与消息模板 |
 | 第三层·设计 | [docs/design/memory-design.md](docs/design/memory-design.md) | 记忆分级 spec |
 | 第三层·设计 | [docs/design/recovery-toolkit.md](docs/design/recovery-toolkit.md) | retry/checkpoint/rewind/规则注入 |
-| 第三层·设计 | [docs/design/recovery-toolkit-impl.md](docs/design/recovery-toolkit-impl.md) | 恢复工具包实施契约（阶段二：现状核验 + 构建清单 + 验收门） || 第三层·设计 | [docs/design/magic-keywords.md](docs/design/magic-keywords.md) | 三魔法关键词映射与 hook 设计 |
+| 第三层·设计 | [docs/design/recovery-toolkit-impl.md](docs/design/recovery-toolkit-impl.md) | 恢复工具包实施契约（阶段二：现状核验 + 构建清单 + 验收门） |
+| 第三层·设计 | [docs/design/magic-keywords.md](docs/design/magic-keywords.md) | 三魔法关键词映射与 hook 设计 |
 | 第三层·预设 | [docs/design/presets/review.md](docs/design/presets/review.md) | 审查层 preset 骨架 |
 | 第三层·预设 | [docs/design/presets/planner.md](docs/design/presets/planner.md) | 规划层 preset 骨架 |
 | 第三层·预设 | [docs/design/presets/executor.md](docs/design/presets/executor.md) | 执行层 preset 骨架 |
@@ -65,13 +66,14 @@
 | 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 待验证假设的预注册实验） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
+| 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D29 + 文档一致性）+ 5 漂移修复 + 新缺口清单（learn/model-auth/skill 噪音/离线降级） |
 
 ## 4. 待确认项（U1–U3）
 
 | # | 待确认 | 默认方案 |
 |---|---|---|
 | U1 | 监督层拓扑 | 规划层的 continuable 子（send_message/report 原生双向）；备选：审查层的子（需转发，不推荐） |
-| U2 | spike：子代理能否用 session_query 读父会话日志（授权规则实测） | 已实测（2026-08-14，见 [runbook §5.1](docs/design/phase1-runbook.md#51-实测记录2026-08-14阶段一验收样例判定--中间档)）：session_search/session_event_search 在本部署被整体禁用（部署级配置，非授权规则），progress 文件可读 → 监督层用「报告推送 + 落盘事实」两通道（备选方案，成立） |
+| U2 | spike：子代理能否用 session_query 读父会话日志（授权规则实测） | 已实测（2026-08-14，见 [runbook §5.1](docs/design/phase1-runbook.md#51-实测记录2026-08-14阶段一验收样例判定--中间档)）：当时 session_search 被部署级禁用 → 两通道兜底；**现已启用全文搜索**（profile patch `openAt: first-search`，实测 20 hits），recall 三通道恢复 |
 | U3 | 授权闸实现方式 | 一期 prompt 规则（派发前确认）；二期评估接 DSH 审批 seam |
 
 ## 5. 下一步（实施进度）
