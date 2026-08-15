@@ -9,6 +9,7 @@ MiOpIIk 的 DeepSeek Harness 插件集。命名遵循 DSH 插件约定：包 `@c
 | `@chillizu/mop-tool-recovery`  | tool  | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_rule_inject` / `mop_rule_show`（TTSR 式规则注入） |
 | `@chillizu/mop-magic-keywords` | hook  | 正文检测 `ultrathink` / `workflowz`（排除 code fence/inline code）→ `form: notice` 上下文消息注入                                                           |
 | `@chillizu/mop-capabilities`   | probe | `mop_probe_capabilities`（探测 DSH seam 可用性 → `.dsh/memory/capabilities.md` 能力清单，防上游漂移）                                                       |
+| `@chillizu/mop-executor`       | tool  | `mop_spawn_executor`（一次性执行层子代理，每次派发指定 model/provider，默认 flash）                                                                         |
 
 ## 安装（agent preset 绝对路径行，免发布/pnpm）
 
@@ -27,6 +28,10 @@ MiOpIIk 的 DeepSeek Harness 插件集。命名遵循 DSH 插件约定：包 `@c
 # ── capabilities ──
 - id: mop-capabilities
   name: ${DSH_HOME}/profiles/mop-capabilities/index.js
+
+# ── executor ──
+- id: mop-executor
+  name: ${DSH_HOME}/profiles/mop-executor/index.js
 ```
 
 3. `dsh` 重启后 `standingKeyFor` 挂载验证。
