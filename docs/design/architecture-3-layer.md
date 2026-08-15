@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | 审查层（Review） | 根会话 | 用户 preset `miopiik`（persona 行 = 审查层 prompt） | pragmatic + default（+ 用户交互规则） | 全量 + plan mode + goal + memory + subagent 控制 + session_query + **checkpoint/rewind 管理工具** | 强模型 |
 | 规划层（Planner） | continuable 后台子代理 | `subagent_planner` 工具行（config.persona + toolFilter deny） | default | workflow + subagent 派发 + read/grep/edit + 项目记忆 + todo + session_query | 强模型 |
-| 执行层（Executor） | one-shot 子代理 | `subagent_executor` 工具行（config.persona + toolFilter allow 最小集） | default 精简 | 最小集 read/write/edit/glob/grep/bash/todo；**无 subagent/workflow 工具**（toolFilter 硬过滤） | 廉价模型 |
+| 执行层（Executor） | one-shot 子代理 | `mop_spawn_executor` 工具行（config.persona + toolFilter allow 最小集） | default 精简 | 最小集 read/write/edit/glob/grep/bash/todo；**无 subagent/workflow 工具**（toolFilter 硬过滤） | 廉价模型 |
 | 监督层（Supervisor） | continuable 后台子代理（默认 = 规划层的子，U1） | `subagent_supervisor` 工具行（config.persona + 只读 toolFilter） | default + 沉默即通过 | 只读为主 read/grep + session_query；大上下文 | 廉价模型 |
 
 ## 2. 职责边界（分工设计，固定不变）
@@ -89,7 +89,7 @@ DSH 机制（源码核实）：子代理**加入父级 preset**（无 per-child 
   name: '@deepseek-ai/dsh-tool-subagent'
   config:
     provider: spawn
-    toolName: subagent_executor
+    toolName: mop_spawn_executor
     agentOptions: { provider: deepseek-official, model: deepseek-v4-flash }
     persona: <执行层 prompt 全文>
     toolFilter:

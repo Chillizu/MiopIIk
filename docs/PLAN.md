@@ -14,7 +14,7 @@
 | D1 | 总体架构 = 三层 + 监督层（审查层 / 规划层 / 执行层 / 监督层） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D2 | 审查层 = 根会话，用户 preset `miopiik`（从 standard copy，persona 行 = 审查层 prompt 全文），直接对话用户 | 同上 |
 | D3 | 规划层 = continuable 后台子代理，由 `subagent_planner` 工具行派发（config.persona = 规划层 prompt 全文 + toolFilter deny 用户直连/ralph/goal/web 工具） | 同上 |
-| D4 | 执行层 = one-shot 子代理，`subagent_executor` 工具行（persona + toolFilter allow 最小集，无 subagent/workflow 工具） | 同上 |
+| D4 | 执行层 = one-shot 子代理，`mop_spawn_executor` 工具行（persona + toolFilter allow 最小集，无 subagent/workflow 工具） | 同上 |
 | D5 | 监督层 = continuable 子代理，`subagent_supervisor` 工具行（persona + 只读 toolFilter），默认拓扑为**规划层的子**；沉默即通过 | 同上 + [通信协议](docs/design/communication-protocol.md) |
 | D6 | 人格映射：全层用 OMP `default.md`（证据优先）；审查层叠加 `pragmatic.md`；弃用 `friendly.md` | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D7 | 通信走 DSH 树形原语：`send_message`（父→子）、`report`（子→父）；无兄弟直连（无 OMP 式 IRC） | [通信协议](docs/design/communication-protocol.md) |

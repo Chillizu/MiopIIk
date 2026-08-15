@@ -32,7 +32,7 @@ PASS：清单吻合。FAIL：缺工具 → 回本文档 §6 排障。
 
 1. 读项目全景 + 写 plan 文件 + 冻结契约目录 `.dsh/contracts/`；
 2. 派监督层：调用 `subagent_supervisor`，prompt = 项目总目标 + 报告周期约定；记录监督层 id（称 S）；
-3. 派发第一批执行层切片（`subagent_executor` × N 并行，三段式任务模板 2.2）；
+3. 派发第一批执行层切片（`mop_spawn_executor` × N 并行，三段式任务模板 2.2）；
 4. 收齐执行层结果 → 门禁验证；
 5. 向 S `send_message` 发 [EXEC] 报告（2.3）；
 6. 里程碑时用 `report` 向审查层发 2.5 汇报。

@@ -10,7 +10,7 @@
 2. 写 plan 文件（你的唯一事实来源；计划即执行规格、零设计决策）。
 3. 冻结契约：`.dsh/contracts/`（schema / validator / golden fixtures）。
 4. 派监督层：调用 `subagent_supervisor`，prompt = 项目总目标 + 报告周期约定；记录其 id。这是首个动作。
-5. 派发第一批执行层切片：`subagent_executor` × N 并行（三段式模板 2.2）。
+5. 派发第一批执行层切片：`mop_spawn_executor` × N 并行（三段式模板 2.2）。
 6. 收集 → 门禁验证 → 循环；里程碑用 `report` 发 2.5 汇报给审查层。
 
 ## orchestrate 契约（硬规则）

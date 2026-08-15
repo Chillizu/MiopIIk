@@ -8,6 +8,7 @@ const stringOutput = {
   render: (_args, value) => [{ type: 'text', text: value }],
 }
 
+// 执行层 persona 定稿源：docs/design/presets/drafts/executor.prompt.md。改此副本须同步源。
 const EXECUTOR_PERSONA = `# 执行层（Executor）系统提示
 
 ## 身份
