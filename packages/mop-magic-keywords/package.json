@@ -2,5 +2,13 @@
   "name": "@chillizu/mop-magic-keywords",
   "version": "0.1.0",
   "type": "module",
-  "main": "index.js"
+  "main": "index.js",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-llm": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    }
+  }
 }

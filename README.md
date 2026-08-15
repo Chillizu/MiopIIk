@@ -4,10 +4,10 @@ MiOpIIk 的 DeepSeek Harness 插件集。命名遵循 DSH 插件约定：包 `@c
 
 ## 插件
 
-| 包 | 域 | 工具/行为 |
-|---|---|---|
-| `@chillizu/mop-tool-recovery` | tool | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_rule_inject` / `mop_rule_show`（TTSR 式规则注入） |
-| `@chillizu/mop-magic-keywords` | hook | 正文检测 `ultrathink` / `workflowz`（排除 code fence/inline code）→ `form: notice` 上下文消息注入 |
+| 包                             | 域   | 工具/行为                                                                                                                                                   |
+| ------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@chillizu/mop-tool-recovery`  | tool | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_rule_inject` / `mop_rule_show`（TTSR 式规则注入） |
+| `@chillizu/mop-magic-keywords` | hook | 正文检测 `ultrathink` / `workflowz`（排除 code fence/inline code）→ `form: notice` 上下文消息注入                                                           |
 
 ## 安装（agent preset 绝对路径行，免发布/pnpm）
 
