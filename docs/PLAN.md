@@ -7,7 +7,7 @@
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
 
-## 2. 已确认决策（D1–D26）
+## 2. 已确认决策（D1–D29）
 
 | # | 决策 | 详情文档 |
 |---|---|---|
@@ -29,7 +29,7 @@
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
 | D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
-| D19 | 模型路由沿用 OMP modelRoles 直觉：审查/规划强模型，执行/监督廉价模型 | [architecture-3-layer](docs/design/architecture-3-layer.md) |
+| D19 | 模型路由（**待验证假设**）：审查/规划强模型、执行/监督廉价模型——沿用 OMP 直觉，但漏报率/rewind 率无量化门；降级为待验证，预注册实验见 [model-routing-experiment](docs/design/model-routing-experiment.md) | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D20 | 后台任务对齐 DSH jobs（job_list/output/kill + run_in_background）；长任务强制详细日志 + 结束 flag + ETA | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D21 | 计划树工作流：大项目先建树（第一层计划 / 第二层文档参考+对话记录简述 / 第三层设计细则），本树即约定实例 | [plan-tree-workflow](docs/design/plan-tree-workflow.md) |
 | D22 | 简洁原则：后期插件实现时，提示词（特别是提示词）与代码必须保持简洁——只给事实与验收，不给方法说教 | 全树适用 + [lsp-extension](docs/design/lsp-extension.md) §6 |
@@ -37,6 +37,9 @@
 | D24 | 规划层上下文管理：长命会话挂 DSH 自动压缩（阈值触发 + 工具结果剪枝）；规划层可**自主 compact**（状态折叠：写 [EXEC] 汇总 + 项目记忆落盘 → handoff 新会话续跑）；WATCHDOG 式落盘笔记对抗压缩丢失 | [architecture-3-layer](docs/design/architecture-3-layer.md) §7 |
 | D25 | 落地形态（DSH 机制约束）：**单 preset `miopiik` + 三个 delegation 工具行**；子代理加入父级 preset（无 per-child preset 参数），per-child 角色 = 工具行 config 的 persona 覆盖（shadow `deployment:persona`）+ toolFilter allow/deny；四个 prompt 全文定稿于 presets 目录并嵌入 miopiik 组合 | [architecture-3-layer](docs/design/architecture-3-layer.md) §8 |
 | D26 | 命名约定：MiOpIIk 自建包用 `@chillizu/mop-<domain>-<feature>`（mop = MiOpIIk 域，对应 DSH 的 dsh-）；插件 name = `mop-<domain>-<feature>`；模型工具名 = `mop_<verb>`（下划线）；组合行 id 与插件 name 一致 | 全树适用 |
+| D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
+| D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
+| D29 | D19 模型路由实验（类型：实验；状态：待验证；证据：预注册骨架）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率，量化门见 [model-routing-experiment](docs/design/model-routing-experiment.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 
 ## 3. 计划树索引
 
@@ -58,6 +61,8 @@
 | 第三层·模板 | [docs/design/templates/report-template.md](docs/design/templates/report-template.md) | 工作报告模板（[EXEC]）+ P0–P3 验收格式 |
 | 第三层·约定 | [docs/design/plan-tree-workflow.md](docs/design/plan-tree-workflow.md) | 计划树工作流约定（本树自身的元规则） |
 | 第三层·设计 | [docs/design/lsp-extension.md](docs/design/lsp-extension.md) | 动态 LSP 扩展设计（可选 S9） |
+| 第三层·设计 | [docs/design/capabilities.md](docs/design/capabilities.md) | 能力探测设计（D27：seam 可用性清单，防上游漂移） |
+| 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 待验证假设的预注册实验） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
 
@@ -77,11 +82,14 @@
 3. **记忆细化**（D12）：全局记忆 `~/.dsh/memory/global/` + persona 注入 + recall 全文搜索启用（profile patch，重启生效）✓
 4. **魔法关键词 hook**（D15）：`@chillizu/mop-magic-keywords` 入 miopiik，正文检测 ultrathink/workflowz → notice 注入 ✓
 5. **命名约定**（D26）：`@chillizu/mop-<domain>-<feature>` / `mop_<verb>` ✓
+6. **能力探测**（D27）：`@chillizu/mop-capabilities` 探测 seam 可用性 → `.dsh/memory/capabilities.md` ✓
+7. **审查层监督模型**（D28）：用户即顶层监督者 + 审查层自 checkpoint（写入 persona + architecture §2）✓
 
 待办（用户门控，需重启/实测）：
 - recall 全文搜索**重启 dsh web 后验证**（session_search/session_trace 可用）；
 - 冷会话 rewind **实测**（需真实 settle 的冷规划层会话）；
-- 语义检索（bge-m3 嵌入）留二期，可选。
+- D29 模型路由实验（D19 待验证假设）：跑预注册实验 → 回写 D19 状态；
+- 语义检索（bge-m3 嵌入）弃用。
 
 ## 6. 维护规则
 

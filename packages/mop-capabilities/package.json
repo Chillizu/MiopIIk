@@ -1,0 +1,14 @@
+{
+  "name": "@chillizu/mop-capabilities",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  }
+}
