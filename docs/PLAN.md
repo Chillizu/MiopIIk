@@ -42,6 +42,8 @@
 | D29 | D19 模型路由实验（类型：实验；状态：已跑，弱判别；证据：24 run + 报告）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率；24 run 全门 PASS 但判别力弱（0 rewind + 注入缺陷零传播），结论为「初步确认」非强确认，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 | D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
 | D31 | 监督层漏报水位（类型：实测发现；状态：已实测；证据：D29 §3.2）——监督层对细微（涌现）缺陷漏报 33%（2/6，flash/pro 持平，> D16 预注册 20% 红线）。决策：**接受为已知限制**（N=6 方向性证据，非强统计）；缓解候选「双模型交叉监督」（缺陷类型互补暗示可压漏报）随 D29v2 一并验证，不单独立项 | [d29-experiment-report](docs/review/d29-experiment-report.md) §3.2 |
+| D32 | 轻量模式 = 三档 preset（类型：设计；状态：已定；证据：外部讨论 + 社区查证）——纠正「极简模式最好」（官方极简=基准测试用，非生产推荐）；审查层「只用 bash」**否决**（bash 是无差别管道：藏能力 + 丢 sandboxPolicy 细粒度，且砍掉体系在用的 read/grep/edit/session_search）；工具面已按职责收窄（执行 7/监督 6），真瘦身空间在 prompt+上下文。三档：miopiik-lite（单会话无 subagent 行）/ miopiik（现状）/ miopiik-full（四层+监督+授权闸全开），三档共享 persona + mop 插件；lite 无 subagent 行 = U3 场景级禁停机制化；升档路径写入审查层 persona。红线：不动 compaction（D24）、不动 session_query/记忆（D12/D10） | [lightweight-mode](docs/design/lightweight-mode.md) |
+| D33 | 上游裁判输入通道（类型：过程原则；状态：已定；证据：上游模型实战 + D17）——审查层=体系内 CTO（当事人、有执行权、判错担责）；上游模型裁判=外聘审计（局外人、零利益相关、每轮重置、只有说服力）；其「清醒」=结构性清白（无沉没成本）。教训：给上游裁判的永远是一手产物 + 复算路径（仓库/源码/原始报告），不是中间层结论；2.5 汇报模板「证据等级：URL/日志/复算脚本」栏是最不能省的 | [report-template](docs/design/templates/report-template.md) §4 |
 
 ## 3. 计划树索引
 
@@ -65,6 +67,7 @@
 | 第三层·约定 | [docs/design/plan-tree-workflow.md](docs/design/plan-tree-workflow.md) | 计划树工作流约定（本树自身的元规则） |
 | 第三层·设计 | [docs/design/lsp-extension.md](docs/design/lsp-extension.md) | 动态 LSP 扩展设计（可选 S9） |
 | 第三层·设计 | [docs/design/offline-degradation.md](docs/design/offline-degradation.md) | 离线降级设计（补哲学审计批评 5；只设计不实现） |
+| 第三层·设计 | [docs/design/lightweight-mode.md](docs/design/lightweight-mode.md) | 轻量模式三档 preset 设计（D32：纠正极简神话 + 否决 bash-only + 红线） |
 | 第三层·设计 | [docs/design/capabilities.md](docs/design/capabilities.md) | 能力探测设计（D27：seam 可用性清单，防上游漂移） |
 | 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 假设的预注册实验，已跑·弱判别） |
 | 第三层·设计 | [docs/design/model-auth.md](docs/design/model-auth.md) | 模型授权闸设计（D30：资源对象授权 + agent/request 全局闸点） |
@@ -103,6 +106,9 @@
 待办（用户门控，需重启/实测）：
 - **D29v2 强版本实验续跑**（余额已恢复）：真实代码逻辑切片 + 隐蔽语义雷 + N≥20；任务集/缺陷/金标已冻结于 `.dsh/contracts/d29v2/`（t01–t20），跑到 t18–t20 因余额中断，续跑前核剩余 run + token 采集（补 D29 弱判别根因）
 - **代码层机械补·后续**（dsh.bundle + 真实组合测试）：方案已出（workflow 审查，deepseek-official/pro），待实施（回应 DSH 生态契合形态层 30%；Config schema 已落地）
+- **三档 preset 落地**（D32）：建 miopiik-lite / miopiik-full（走 editing-cordis-compositions skill），三档共享 persona + mop 插件，lite 无 subagent 行
+- **工具 schema 上下文实测**（D32）：压缩事件日志核对「toolFilter 隐藏的工具 schema 是否仍占 token」
+- **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token；借机补 D18 run-stats 可编程出口
 
 ## 6. 维护规则
 
