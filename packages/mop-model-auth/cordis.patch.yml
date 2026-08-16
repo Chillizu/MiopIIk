@@ -1,0 +1,3 @@
+- insert:
+    - id: mop-model-auth
+      name: '@chillizu/mop-model-auth'

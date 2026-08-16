@@ -1,0 +1,3 @@
+- insert:
+    - id: mop-tool-recovery
+      name: '@chillizu/mop-tool-recovery'

@@ -1,0 +1,3 @@
+- insert:
+    - id: mop-executor
+      name: '@chillizu/mop-executor'
