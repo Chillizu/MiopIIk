@@ -117,7 +117,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_checkpoint',
       description:
-        'Record a checkpoint (label, optional git note, optional target session) at the last completed turn boundary of that session, into .dsh/memory/checkpoints.md.',
+        'Record a recovery point for a session (label + its last completed turn boundary) into .dsh/memory/checkpoints.md. Call at major milestones; a checkpoint is meaningful only across turns — call it at the start of the next turn for the turn just finished.',
       parameters: {
         label: { type: 'string', required: true },
         note: { type: 'string' },
@@ -158,7 +158,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_rewind',
       description:
-        'Fork a target session (planner) to a named checkpoint boundary — hot via sessions.fork, cold via persistence read + seeded create — returning the child session id (lossless).',
+        'Fork a target session (planner) losslessly back to a named checkpoint boundary and return the child session id. Use when the planner went off-track or you want to try another route. label must exist in checkpoints.md; pass sessionId equal to the session recorded in that checkpoint.',
       parameters: {
         sessionId: { type: 'string', required: true },
         label: { type: 'string', required: true },
@@ -175,16 +175,25 @@ export function apply(ctx) {
         const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
         const cp = await readExisting(fs, target)
         let seq = null
+        let cpSession = null
         for (const line of cp.split('\n')) {
           const entry = parseCheckpointLine(line)
           if (entry !== null && entry.label === args.label) {
             seq = entry.seq
+            cpSession = entry.session
             break
           }
         }
         if (seq === null)
           throw new Error(`no checkpoint found for label "${args.label}"`)
         const sid = normalizeSessionId(sessions, args.sessionId)
+        // 归属校验：checkpoint 记录的 session 必须与传入 sessionId 一致（归一化后比对）。
+        // 旧行无 session 字段则跳过校验（向后兼容）。
+        if (cpSession && normalizeSessionId(sessions, cpSession) !== sid) {
+          throw new Error(
+            `mop_rewind: checkpoint "${args.label}" belongs to session ${cpSession}, not ${args.sessionId} — pass the checkpoint's own sessionId`,
+          )
+        }
 
         if (sessions.get(sid)) {
           const child = sessions.fork(sid, seq)
@@ -214,7 +223,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_checkpoint_list',
       description:
-        'List every checkpoint recorded in .dsh/memory/checkpoints.md (label / session / seq / note).',
+        'List every recovery point in .dsh/memory/checkpoints.md (label / session / seq / note) — read this to see what you can rewind to.',
       parameters: {},
       output: stringOutput,
       async execute(_args, exec) {
@@ -247,7 +256,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_rule_inject',
       description:
-        'Inject or replace the session hard rule (TTSR-style) as a prompt section, scoped to the calling session.',
+        'Inject a session-scoped rule that overrides default behavior for the current session. Use to freeze a lesson or constraint so later turns obey it.',
       parameters: { text: { type: 'string', required: true } },
       output: stringOutput,
       execute(args, exec) {
@@ -274,8 +283,7 @@ export function apply(ctx) {
   tools.register(
     defineTool({
       name: 'mop_rule_show',
-      description:
-        'Return the currently injected session rule text for the calling session.',
+      description: 'Show the rules injected for the current session.',
       parameters: {},
       output: stringOutput,
       execute(_args, exec) {

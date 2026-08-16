@@ -132,7 +132,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_probe_capabilities',
       description:
-        'Probe DSH seams (sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy) and write a capabilities manifest to .dsh/memory/capabilities.md; use at session start to detect upstream drift.',
+        'Probe DSH seam availability and write the capability manifest to .dsh/memory/capabilities.md. Call at session start to detect upstream drift instead of assuming contracts from memory.',
       parameters: {},
       output: stringOutput,
       async execute(_args, exec) {

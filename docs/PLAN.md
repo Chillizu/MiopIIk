@@ -29,7 +29,7 @@
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
 | D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
-| D19 | 模型路由（**待验证假设**）：审查/规划强模型、执行/监督廉价模型——沿用 OMP 直觉，但漏报率/rewind 率无量化门；降级为待验证，预注册实验见 [model-routing-experiment](docs/design/model-routing-experiment.md)。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
+| D19 | 模型路由（**已初步确认，弱判别**，D29 实验）：审查/规划强模型、执行/监督廉价模型——24 run 实测：H1 flash rewind 0%（不劣于 pro）、H2 注入口径 0 漏报、H3 墙钟 0.60×，全门 PASS；限制：N=6 小样本、注入缺陷零传播致 H2 判别退化、墙钟粗代理 → 标「初步」，详见 [d29-experiment-report](docs/review/d29-experiment-report.md)。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D20 | 后台任务对齐 DSH jobs（job_list/output/kill + run_in_background）；长任务强制详细日志 + 结束 flag + ETA | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D21 | 计划树工作流：大项目先建树（第一层计划 / 第二层文档参考+对话记录简述 / 第三层设计细则），本树即约定实例 | [plan-tree-workflow](docs/design/plan-tree-workflow.md) |
 | D22 | 简洁原则：后期插件实现时，提示词（特别是提示词）与代码必须保持简洁——只给事实与验收，不给方法说教 | 全树适用 + [lsp-extension](docs/design/lsp-extension.md) §6 |
@@ -39,7 +39,7 @@
 | D26 | 命名约定：MiOpIIk 自建包用 `@chillizu/mop-<domain>-<feature>`（mop = MiOpIIk 域，对应 DSH 的 dsh-）；插件 name = `mop-<domain>-<feature>`；模型工具名 = `mop_<verb>`（下划线）；组合行 id 与插件 name 一致 | 全树适用 |
 | D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
-| D29 | D19 模型路由实验（类型：实验；状态：待验证；证据：预注册骨架）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率，量化门见 [model-routing-experiment](docs/design/model-routing-experiment.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
+| D29 | D19 模型路由实验（类型：实验；状态：已跑，弱判别；证据：24 run + 报告）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率；24 run 全门 PASS 但判别力弱（0 rewind + 注入缺陷零传播），结论为「初步确认」非强确认，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 | D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
 
 ## 3. 计划树索引
@@ -93,9 +93,11 @@
 10. **recall 全文搜索验证**（D12）：重启 dsh web 后 session_search 实测 2 hits ✓
 11. **模型授权闸**（D30）：subagent 模型 ∈ 授权集（默认 ∪ allowlist），闸在 agent/request 全局 waterfall，28 单测过 ✓
 12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
+13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 mop-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
+14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
 
 待办（用户门控，需重启/实测）：
-- D29 模型路由实验（D19 待验证假设）：跑预注册实验 → 回写 D19 状态。
+- （空）
 
 ## 6. 维护规则
 

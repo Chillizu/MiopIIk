@@ -115,6 +115,9 @@ export function apply(ctx) {
           `已授权 (${set.size}):`,
         ]
         for (const k of [...set].sort()) lines.push(`- ${k}`)
+        lines.push(
+          'allowlist 缓存于首次读取/授权时刷新；手工编辑文件需重启会话生效',
+        )
         return lines.join('\n')
       },
     }),

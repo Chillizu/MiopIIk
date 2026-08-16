@@ -125,7 +125,7 @@ test('cold rewind seeds through the inclusive boundary and passes meta', async (
       resolve: async () => ({}),
       stat: async () => ({}),
       readText: async () =>
-        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-1 | seq=7\n',
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-cold | seq=7\n',
       writeText: async () => {},
     },
     sessionPersistence: {
@@ -153,7 +153,7 @@ test('hot rewind uses sessions.fork', async () => {
       resolve: async () => ({}),
       stat: async () => ({}),
       readText: async () =>
-        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-1 | seq=3\n',
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-hot | seq=3\n',
       writeText: async () => {},
     },
     sessions: {
@@ -173,6 +173,28 @@ test('hot rewind uses sessions.fork', async () => {
   )
   assert.match(result, /hot/)
   assert.deepEqual(forked, [{ sid: 'sess-hot', seq: 3 }])
+})
+
+test('rewind rejects when checkpoint session does not match sessionId', async () => {
+  const { ctx, registered } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => ({}),
+      readText: async () =>
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-a | seq=3\n',
+      writeText: async () => {},
+    },
+  })
+  apply(ctx)
+  const rewind = registered.find((t) => t.name === 'mop_rewind')
+  await assert.rejects(
+    () =>
+      rewind.execute(
+        { sessionId: 'sess-b', label: 'milestone' },
+        { agent: agent('session-x') },
+      ),
+    /belongs to session sess-a, not sess-b/,
+  )
 })
 
 test('mop_checkpoint_list returns parsed entries', async () => {

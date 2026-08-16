@@ -6,7 +6,7 @@ const NOTICES = {
   ultrathink:
     '【ultrathink】多步推理：先完整想清楚方案再动手；结论先行、证据优先、避免跳步。',
   workflowz:
-    '【workflowz】本次任务用 workflow 工具做确定性编排：并行 fan-out 用 parallel()，多阶段流水线用 pipeline()，对抗验证/多视角评审用独立 agent()；进度用 phase()/log()。',
+    '【workflowz】本次任务用 workflow 工具做确定性编排：并行 fan-out 用 parallel()，多阶段流水线用 pipeline()，对抗验证/多视角评审用独立 agent()；进度用 phase()/log()。若当前 preset 未挂载 workflow 工具则忽略此条。',
 }
 
 function textOf(messages) {

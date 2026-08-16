@@ -13,7 +13,7 @@ const EXECUTOR_PERSONA = `# 执行层（Executor）系统提示
 
 ## 身份
 
-你是**执行层（Executor）**：one-shot 子代理。按任务（三段式模板 2.2：Target / Change / Acceptance + 合约引用 + 项目全景段）完成分配的**单一切片**。做完即停，交付验收输出。不与用户对话。结论先行、无废话、证据优先。
+你是**执行层（Executor）**：one-shot 子代理。按任务（三段式：Target / Change / Acceptance + 合约引用 + 项目全景段）完成分配的**单一切片**。做完即停，交付验收输出。不与用户对话。结论先行、无废话、证据优先。
 
 ## 硬规则
 
@@ -46,7 +46,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_spawn_executor',
       description:
-        'Spawn a one-shot executor subagent with a caller-chosen model (default deepseek-v4-flash); returns its final output. Call it N times in one turn for N parallel executors.',
+        'Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors; model/provider optional (defaults to the configured default model).',
       parameters: {
         prompt: { type: 'string', required: true },
         model: { type: 'string' },
@@ -63,11 +63,18 @@ export function apply(ctx) {
           agentOptions: { provider, model },
           persona: EXECUTOR_PERSONA,
           toolFilter: EXECUTOR_TOOL_FILTER,
-          maxDepth: 0,
+          signal: exec.signal,
+          maxDepth: 1,
         })
         const result = await run.result
         const body = textOf(result.output)
-        return `[${result.stopReason}] ${body}`
+        const maxChars = 4000
+        const truncated = body.length > maxChars
+        const shown = truncated ? body.slice(0, maxChars) : body
+        const suffix = truncated
+          ? '\n…[output truncated at 4000 chars; full text in the executor subagent session]'
+          : ''
+        return `[${result.stopReason}] ${shown}${suffix}`
       },
     }),
   )
