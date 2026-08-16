@@ -14,7 +14,7 @@
 
 - **执行层（7 件）、监督层（6 件只读）**：已接近职责最小集；可砍的只有执行层 `todo_write`（one-shot 短命会话用 todo 意义存疑），边际收益很小。
 - **审查层「只用 bash」否决**，三条：① 安全悖论——bash 是无差别管道，`cat`=read、`sed -i`=edit、`curl`=web，把所有能力藏进一个管道还丢 sandboxPolicy 对文件写的细粒度管控；瘦身减的是选择负担不是权限，别混淆两目标。② 砍掉体系在用能力——会话开首读全局记忆（read）、里程碑验收（read/grep）、小改动自处（edit）、`session_search`（recall D12）、`list_agents`/`send_message`（追踪规划层 D10）。③ D29 里 pro 优势恰在「计数/结构类」核查（审查层验收本职），工具收窄对此无收益证据。
-- **真瘦身点**：四层都背着 persona 全文 + 继承的 miopiik 全量工具 schema + 记忆注入；工具 schema 按注册量算 token——**子代理继承父级全部工具行再靠 toolFilter 隐藏，schema 是否仍占上下文，待实测**（压缩事件日志可看）。
+- **真瘦身点**：四层都背着 persona 全文 + 记忆注入 + **可见工具** schema（visible 数 = 模型 token）。已实测：**toolFilter 隐藏的工具 schema 不计入上下文**——`tools.restrict()` 在 view 层过滤，`view.visible` 只含 admitted 工具，模型侧 schema 唯一来源 `systemPrompt.tools(() => wireSchemas(scope))` 从 visible 构建（证据 harness `core/tools/src/index.ts:832/984/1071` + `scoped.spec.ts`）。故减 schema token 的真杠杆 = **少挂工具行**（root 会话 visible 数），而非更狠 toolFilter——lite 档靠「不挂 subagent 行」减 token。
 
 ## 4. 三档
 
@@ -37,5 +37,5 @@
 
 ## 7. 实验建议（待办）
 
-- **工具 schema 是否计入上下文**：用 capabilities 思路实测（压缩事件日志核对隐藏工具是否仍占位）。
+- ~~工具 schema 是否计入上下文~~ **已实测（结论：不计入）**：toolFilter 在 view 层过滤，隐藏 schema 不进 `systemPrompt.tools`；真杠杆 = 少挂工具行（见 §3）。
 - **工具面瘦身**：D29 方法跑 {现有执行 7 工具} vs {再收窄}，门 = 首轮通过率 + token；借机接 run-stats 可编程出口（D18 缺口）。
