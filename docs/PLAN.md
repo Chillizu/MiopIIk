@@ -106,7 +106,7 @@
 待办（用户门控，需重启/实测）：
 - **D29v2 强版本实验续跑**（余额已恢复）：真实代码逻辑切片 + 隐蔽语义雷 + N≥20；任务集/缺陷/金标已冻结于 `.dsh/contracts/d29v2/`（t01–t20），跑到 t18–t20 因余额中断，续跑前核剩余 run + token 采集（补 D29 弱判别根因）
 - **代码层机械补·后续**（dsh.bundle + 真实组合测试）：方案已出（workflow 审查，deepseek-official/pro），待实施（回应 DSH 生态契合形态层 30%；Config schema 已落地）
-- **三档 preset 落地**（D32）：建 miopiik-lite / miopiik-full（走 editing-cordis-compositions skill），三档共享 persona + mop 插件，lite 无 subagent 行
+- ~~三档 preset 落地~~（D32）**miopiik-lite 已建**（去 delegation 组 + mop-executor，YAML 校验过，待开会话实测）；miopiik 现状 = full 档（已含 supervisor+model-auth，讨论「miopiik=3 层」系旧认知），不另建 redundant full 副本；「无 supervisor 中档」留待你定
 - ~~工具 schema 上下文实测~~（D32）**已实测：不计入**——toolFilter 在 view 层过滤，模型侧 schema 只含 visible（harness core/tools/index.ts:832/984）；真杠杆 = 少挂工具行
 - **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token；借机补 D18 run-stats 可编程出口
 - **另 3 包路径提命名常量**（capabilities/learn/tool-recovery）：`.dsh/…` 路径提为命名常量 + 注释引设计文档（不新增 Config，避免暗示存在不存在的可配置项）
