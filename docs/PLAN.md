@@ -7,7 +7,7 @@
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
 
-## 2. 已确认决策（D1–D30）
+## 2. 已确认决策（D1–D33）
 
 | # | 决策 | 详情文档 |
 |---|---|---|
@@ -109,10 +109,13 @@
 - **三档 preset 落地**（D32）：建 miopiik-lite / miopiik-full（走 editing-cordis-compositions skill），三档共享 persona + mop 插件，lite 无 subagent 行
 - **工具 schema 上下文实测**（D32）：压缩事件日志核对「toolFilter 隐藏的工具 schema 是否仍占 token」
 - **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token；借机补 D18 run-stats 可编程出口
+- **另 3 包路径提命名常量**（capabilities/learn/tool-recovery）：`.dsh/…` 路径提为命名常量 + 注释引设计文档（不新增 Config，避免暗示存在不存在的可配置项）
+- **README 安装章节改写**：从「profiles 目录 + 绝对路径」改为 `dsh plugin --profile web add link:…`（bundle 姿势）
 
 ## 6. 维护规则
 
 - 本文件是单源事实；任何设计变更先改本文件对应决策行，再改详情文档；
+- 双树方向：git-tracked 文档（PLAN.md、docs/design、docs/review）以 **repo 为权威**（git 有历史、push 落点），workspace 为镜像 + 本地独有文件（docs/research、docs/profile、.dsh）；改 repo 后立即 cp→workspace，改 packages 后立即 cp→live profiles（`~/.dsh/profiles/mop-*`）；
 - 改决策行时，必须同步该决策承载文档的代码块（如 D25 改动需同步 architecture-3-layer §8 yaml），并在 philosophy-audit §2 登记漂移修复；
 - 会话发现的新偏好/教训 → 更新 [user-preference-profile](docs/profile/user-preference-profile.md)，重要结论升级为 PLAN.md 决策；
 - 所有文档遵循用户风格：直接、简洁、无 Emoji、证据优先。

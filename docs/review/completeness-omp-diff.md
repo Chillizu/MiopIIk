@@ -6,7 +6,7 @@
 
 | # | 自建项 | 状态 | 证据 |
 |---|---|---|---|
-| S1 | 四层 preset | ✓ | 单 preset `miopiik` + 三 delegation 行（D25）；standingKeyFor 通过 |
+| S1 | 四层 preset | ✓ | 单 preset `miopiik` + 两 delegation 行 + `mop_spawn_executor`（D25）；standingKeyFor 通过 |
 | S2 | 通信协议 + 模板 | ✓ | 2.1/2.2/2.3/2.4/2.5 + [EXEC]；phase1/2 实测 |
 | S3 | 魔法关键词 hook | ✓ | `mop-magic-keywords`：ultrathink/workflowz 正文检测 + orchestrate 常驻 persona |
 | S4 | 恢复工具包 | ✓ | checkpoint/rewind/rule 固化入 miopiik；`/retry` 弃用（自动重试=原生 provider）；run-stats=原生 trajectory |
