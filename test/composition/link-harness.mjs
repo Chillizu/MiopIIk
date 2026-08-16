@@ -44,6 +44,7 @@ const FIXTURE_LINKS = [
 // [scope, name, target-under-harness] — mop-executor's own imports
 const WORKSPACE_LINKS = [
   ['@deepseek-ai', 'dsh-tools', 'packages/core/tools'],
+  ['@deepseek-ai', 'dsh-llm', 'packages/llm/llm'],
   ['@deepseek-ai', 'schemastery', 'vendor/schemastery'],
 ]
 
@@ -67,8 +68,11 @@ export function ensureLinks() {
       join(HARNESS_ROOT, rel),
     )
   }
-  linkIfMissing(
-    join(here, 'node_modules', '@chillizu', 'mop-executor'),
-    join(MOP_ROOT, 'packages', 'mop-executor'),
-  )
+  // The three Config-schema mop packages the composition tests mount.
+  for (const name of ['mop-executor', 'mop-magic-keywords', 'mop-model-auth']) {
+    linkIfMissing(
+      join(here, 'node_modules', '@chillizu', name),
+      join(MOP_ROOT, 'packages', name),
+    )
+  }
 }

@@ -9,7 +9,7 @@ import { ensureLinks, HARNESS_ROOT } from './link-harness.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const CONFIG = join(here, 'cordis.yml')
-const CONFIG_WITH_EXECUTOR = join(here, 'cordis.with-executor.yml')
+const CONFIG_WITH_MOP = join(here, 'cordis.with-mop.yml')
 
 /** The real boot entry: packages/boot/app-boot/src/index.ts:757 (built lib). */
 let boot
@@ -68,11 +68,13 @@ test('real spawn driver throws TypeError when a start request lacks signal', asy
   )
 })
 
-test('real Loader coerces mop-executor Config defaults into apply(config)', async () => {
-  // Regression: mop-executor Config used z.number().int() (absent from real
-  // schemastery); the mock stub hid it. Fixed to z.natural(). This asserts the
-  // Loader fills defaults into apply's second arg (maxOutputChars 4000).
-  const ctx2 = await boot('mop-composition', CONFIG_WITH_EXECUTOR)
+test('real Loader coerces all three mop Config schemas into apply(config)', async () => {
+  // Regressions: mop-executor used z.number().int() and mop-model-auth used
+  // z.string().optional(), both absent from real schemastery; the mock stub hid
+  // them. This boots all three Config-schema packages through the real Loader,
+  // so any future bogus schema method fails at boot rather than at a preset
+  // switch.
+  const ctx2 = await boot('mop-composition', CONFIG_WITH_MOP)
   try {
     const entries = [...ctx2.loader.entries()]
     const exec = entries.find((entry) => entry.options.id === 'mop-executor')
@@ -80,6 +82,24 @@ test('real Loader coerces mop-executor Config defaults into apply(config)', asyn
     assert.equal(exec.fiber.config.maxOutputChars, 4000)
     assert.equal(exec.fiber.config.provider, 'deepseek-official')
     assert.equal(exec.fiber.config.model, 'deepseek-v4-flash')
+
+    const kw = entries.find(
+      (entry) => entry.options.id === 'mop-magic-keywords',
+    )
+    assert.ok(kw, 'mop-magic-keywords entry must be mounted and active')
+    assert.ok(
+      kw.fiber.config.notices.ultrathink,
+      'notices.ultrathink default must be present',
+    )
+    assert.ok(
+      kw.fiber.config.notices.workflowz,
+      'notices.workflowz default must be present',
+    )
+
+    const auth = entries.find((entry) => entry.options.id === 'mop-model-auth')
+    assert.ok(auth, 'mop-model-auth entry must be mounted and active')
+    // allowlistPath is optional (no .default), so the Loader leaves it undefined.
+    assert.equal(auth.fiber.config.allowlistPath, undefined)
   } finally {
     await ctx2.fiber.dispose()
   }
