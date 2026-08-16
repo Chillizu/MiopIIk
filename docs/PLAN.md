@@ -41,6 +41,7 @@
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
 | D29 | D19 模型路由实验（类型：实验；状态：已跑，弱判别；证据：24 run + 报告）——对比强/弱执行层模型在固定任务集上的 rewind 率 + 弱监督层漏报率；24 run 全门 PASS 但判别力弱（0 rewind + 注入缺陷零传播），结论为「初步确认」非强确认，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 | D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
+| D31 | 监督层漏报水位（类型：实测发现；状态：已实测；证据：D29 §3.2）——监督层对细微（涌现）缺陷漏报 33%（2/6，flash/pro 持平，> D16 预注册 20% 红线）。决策：**接受为已知限制**（N=6 方向性证据，非强统计）；缓解候选「双模型交叉监督」（缺陷类型互补暗示可压漏报）随 D29v2 一并验证，不单独立项 | [d29-experiment-report](docs/review/d29-experiment-report.md) §3.2 |
 
 ## 3. 计划树索引
 
@@ -63,12 +64,14 @@
 | 第三层·模板 | [docs/design/templates/report-template.md](docs/design/templates/report-template.md) | 工作报告模板（[EXEC]）+ P0–P3 验收格式 |
 | 第三层·约定 | [docs/design/plan-tree-workflow.md](docs/design/plan-tree-workflow.md) | 计划树工作流约定（本树自身的元规则） |
 | 第三层·设计 | [docs/design/lsp-extension.md](docs/design/lsp-extension.md) | 动态 LSP 扩展设计（可选 S9） |
+| 第三层·设计 | [docs/design/offline-degradation.md](docs/design/offline-degradation.md) | 离线降级设计（补哲学审计批评 5；只设计不实现） |
 | 第三层·设计 | [docs/design/capabilities.md](docs/design/capabilities.md) | 能力探测设计（D27：seam 可用性清单，防上游漂移） |
-| 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 待验证假设的预注册实验） |
+| 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 假设的预注册实验，已跑·弱判别） |
 | 第三层·设计 | [docs/design/model-auth.md](docs/design/model-auth.md) | 模型授权闸设计（D30：资源对象授权 + agent/request 全局闸点） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
-| 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D30 + 文档一致性）+ 5 漂移修复 + 缺口清单（learn/model-auth 已落地，离线降级仍缝） |
+| 第三层·审查 | [docs/review/philosophy-audit.md](docs/review/philosophy-audit.md) | 全套设计哲学审计（D1–D31 + 文档一致性）+ 漂移修复 + 缺口清单（learn/model-auth 已落地，离线降级设计已落/机制未实现，监督层 33% 漏报已升 D31） |
+| 第三层·审查 | [docs/review/d29-experiment-report.md](docs/review/d29-experiment-report.md) | D29 模型路由实验报告（24 run，弱判别；§3.2 监督层涌现缺陷 33% 漏报） |
 
 ## 4. 待确认项（U1–U3）
 
@@ -95,12 +98,15 @@
 12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
 13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 mop-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
 14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
+15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema/bundle/真实组合测试列机械补（subagent 审查中）✓
 
 待办（用户门控，需重启/实测）：
-- （空）
+- **D29v2 强版本实验续跑**（余额已恢复）：真实代码逻辑切片 + 隐蔽语义雷 + N≥20；任务集/缺陷/金标已冻结于 `.dsh/contracts/d29v2/`（t01–t20），跑到 t18–t20 因余额中断，续跑前核剩余 run + token 采集（补 D29 弱判别根因）
+- **代码层机械补**（Config schema + dsh.bundle + 真实组合测试）：subagent 审查出方案后实施（回应 DSH 生态契合形态层 30%）
 
 ## 6. 维护规则
 
 - 本文件是单源事实；任何设计变更先改本文件对应决策行，再改详情文档；
+- 改决策行时，必须同步该决策承载文档的代码块（如 D25 改动需同步 architecture-3-layer §8 yaml），并在 philosophy-audit §2 登记漂移修复；
 - 会话发现的新偏好/教训 → 更新 [user-preference-profile](docs/profile/user-preference-profile.md)，重要结论升级为 PLAN.md 决策；
 - 所有文档遵循用户风格：直接、简洁、无 Emoji、证据优先。

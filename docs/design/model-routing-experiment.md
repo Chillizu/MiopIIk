@@ -24,7 +24,7 @@
 
 ## 4. TODO
 
-- [ ] 冻结任务集 + golden fixtures（契约先行）
-- [ ] 注入缺陷清单（每切片 1–2 个已知缺陷）
-- [ ] 跑双配置，记录 rewind 率 / 漏报率 / token / 墙钟
-- [ ] 按门判定，回写 D19 状态（待验证 → 已确认 / 推翻）
+- [x] 冻结任务集 + golden fixtures（契约先行）—— 6 切片（用户勾选全选），见 `.dsh/contracts/d29/`（slices/ = 执行层三段式契约，fixtures/ = 审查层 golden，README = 矩阵/门/隔离）
+- [x] 注入缺陷清单（每切片 2 个，共 12 雷）—— `.dsh/contracts/d29/defects.md`（仅审查层）
+- [x] 跑双配置，记录 rewind 率 / 漏报率 / token / 墙钟 —— 24 run 完成，明细见 `.dsh/d29/results/results.md`（墙钟为粗界代理，token 不可编程采集，如实标注）
+- [x] 按门判定，回写 D19 状态（待验证 → **初步确认，弱判别**）—— 全门 PASS，见 [d29-experiment-report](../../docs/review/d29-experiment-report.md)

@@ -68,9 +68,9 @@
 - 审查层**不能直接 compact 规划层**——对跑偏规划层的正确操作 = checkpoint + rewind（fork 新规划层子会话续跑），旧规划层自然退休；这与"checkpoint 作为审查层管理规划层的 git 工具"是同一件事的两半。
 - 权限门 = **落盘先行**（条件式授权）：能 compact 的前提 = 关键状态已写盘（[EXEC] 汇总 + `.dsh/progress/` + `.dsh/memory/` + contracts）；未落盘则无权折叠（WATCHDOG 纪律）。
 
-## 8. 落地形态：单 preset + 三 delegation 行（D25）
+## 8. 落地形态：单 preset + 两 delegation 行 + `mop_spawn_executor`（D25）
 
-DSH 机制（源码核实）：子代理**加入父级 preset**（无 per-child preset 参数）；per-child 角色 = subagent 工具行 config 的 `persona`（shadow `deployment:persona` 段）+ `toolFilter`（allow/deny 全局工具名，未知名启动失败）。因此四层 = 一个用户 preset `miopiik`（从 standard copy）+ 三个 delegation 工具行；`docs/design/presets/*.md` 是四个 prompt 全文的定稿源，嵌入 miopiik 组合。
+DSH 机制（源码核实）：子代理**加入父级 preset**（无 per-child preset 参数）；per-child 角色 = subagent 工具行 config 的 `persona`（shadow `deployment:persona` 段）+ `toolFilter`（allow/deny 全局工具名，未知名启动失败）。因此四层 = 一个用户 preset `miopiik`（从 standard copy）+ 两个 delegation 工具行（planner / supervisor）+ `mop_spawn_executor` 灵活执行层（自定义工具，非 delegation 行）；`docs/design/presets/*.md` 是四个 prompt 全文的定稿源，嵌入 miopiik 组合。
 
 ```yaml
 # miopiik/agent.cordis.yml 关键行（prompt 全文定稿后嵌入）
@@ -85,15 +85,8 @@ DSH 机制（源码核实）：子代理**加入父级 preset**（无 per-child 
     toolFilter:
       deny: [ask_user_question, ralph, create_goal, get_goal, update_goal, web_search]
 
-- id: tool-subagent-executor       # 规划层派执行层（D4）
-  name: '@deepseek-ai/dsh-tool-subagent'
-  config:
-    provider: spawn
-    toolName: mop_spawn_executor
-    agentOptions: { provider: deepseek-official, model: deepseek-v4-flash }
-    persona: <执行层 prompt 全文>
-    toolFilter:
-      allow: [read, write, edit, glob, grep, bash, todo_write]
+# 执行层 = mop_spawn_executor 自定义工具（mop-executor 包注册，非 delegation 行）：
+#   persona + toolFilter allow 最小集 + 可指定 model（默认 flash）内嵌于工具实现
 
 - id: tool-subagent-supervisor     # 规划层派监督层（D5/U1）
   name: '@deepseek-ai/dsh-tool-subagent'
