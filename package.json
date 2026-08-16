@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "test": "node --import ./test/register-mocks.mjs --test \"test/*.test.js\"",
+    "test:composition": "node --test \"test/composition/*.test.mjs\"",
     "check": "node --check packages/mop-tool-recovery/index.js && node --check packages/mop-magic-keywords/index.js && node --check packages/mop-capabilities/index.js && node --check packages/mop-executor/index.js && node --check packages/mop-learn/index.js && node --check packages/mop-model-auth/index.js",
     "lint": "eslint .",
     "format:check": "prettier --check ."

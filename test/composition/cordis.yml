@@ -1,0 +1,36 @@
+# REAL-composition fixture: real @deepseek-ai/dsh-* services mounted through the
+# harness's real Cordis Loader via @deepseek-ai/dsh-app-boot boot(). Bare names
+# resolve from this directory's node_modules (created by link-harness.mjs,
+# pointing at the DSH harness checkout).
+#
+# Row set mirrors the harness base bundle's relevant slice
+# (packages/bundle/base/cordis.patch.yml): tools needs the system-prompt
+# service (ToolRuntime inject ['systemPrompt']), subagent-spawn-in-process
+# hard-injects subagents, and mop-executor would hard-inject tools + subagents.
+#
+# NOTE: mop-executor is intentionally NOT in this clean fixture — its Config
+# schema (z.number().int(), packages/mop-executor/index.js:15) throws against
+# the real @deepseek-ai/schemastery, so the real Loader cannot import it. See
+# cordis.with-executor.yml + composition.test.mjs (canary test) and README.md.
+#
+# The spawn row carries NO config on purpose: assertion ① proves the Loader
+# fills the schema default (providerName: 'spawn') into apply's second arg.
+- id: session
+  name: '@deepseek-ai/dsh-session'
+
+- id: agent
+  name: '@deepseek-ai/dsh-agent'
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    persona: ''
+
+- id: tools
+  name: '@deepseek-ai/dsh-tools'
+
+- id: subagent
+  name: '@deepseek-ai/dsh-subagent'
+
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'

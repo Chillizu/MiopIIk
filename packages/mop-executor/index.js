@@ -12,7 +12,7 @@ const DEFAULT_MAX_OUTPUT_CHARS = 4000
 export const Config = z.object({
   provider: z.string().default(DEFAULT_PROVIDER),
   model: z.string().default(DEFAULT_MODEL),
-  maxOutputChars: z.number().int().min(0).default(DEFAULT_MAX_OUTPUT_CHARS),
+  maxOutputChars: z.natural().default(DEFAULT_MAX_OUTPUT_CHARS),
 })
 
 const stringOutput = {
