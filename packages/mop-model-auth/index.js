@@ -18,7 +18,8 @@ const DEFAULT_ALLOWLIST_PATH = join(
 )
 
 export const Config = z.object({
-  allowlistPath: z.string().optional(),
+  // schemastery 无 .optional()：字段默认即 optional（.required() 才强制）。
+  allowlistPath: z.string(),
 })
 
 const stringOutput = {
