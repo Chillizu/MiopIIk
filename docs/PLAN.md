@@ -98,11 +98,11 @@
 12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
 13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 mop-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
 14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
-15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema/bundle/真实组合测试列机械补（subagent 审查中）✓
+15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（mop-executor/magic-keywords/model-auth 三包）；bundle/真实组合测试列后续 ✓
 
 待办（用户门控，需重启/实测）：
 - **D29v2 强版本实验续跑**（余额已恢复）：真实代码逻辑切片 + 隐蔽语义雷 + N≥20；任务集/缺陷/金标已冻结于 `.dsh/contracts/d29v2/`（t01–t20），跑到 t18–t20 因余额中断，续跑前核剩余 run + token 采集（补 D29 弱判别根因）
-- **代码层机械补**（Config schema + dsh.bundle + 真实组合测试）：subagent 审查出方案后实施（回应 DSH 生态契合形态层 30%）
+- **代码层机械补·后续**（dsh.bundle + 真实组合测试）：方案已出（workflow 审查，deepseek-official/pro），待实施（回应 DSH 生态契合形态层 30%；Config schema 已落地）
 
 ## 6. 维护规则
 
