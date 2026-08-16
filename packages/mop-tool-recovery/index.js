@@ -20,6 +20,9 @@ const stringOutput = {
 const CHECKPOINT_LINE =
   /^- \[[^\]]*\] (.+?) \| session=(\S+) \| seq=(\d+)(?: \| (.*))?\s*$/
 
+// checkpoint 落点（D13，docs/design/recovery-toolkit.md）：项目 .dsh/memory/checkpoints.md，同包内写/读三处必须同一路径。
+const CHECKPOINTS_REL_PATH = '.dsh/memory/checkpoints.md'
+
 /** 构造一条 checkpoint 行；与 {@link parseCheckpointLine} 互为 round-trip 契约。 */
 export function formatCheckpointLine(label, sid, boundary, note) {
   const time = new Date().toISOString()
@@ -145,7 +148,7 @@ export function apply(ctx) {
           events = agent.session.events
         }
         const boundary = lastTurnEndSeq(events)
-        const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
+        const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
         const line = formatCheckpointLine(args.label, sid, boundary, args.note)
         const policy = sandboxPolicy.resolve({ session: agent.session })
         await appendCheckpoint(fs, target, line, policy)
@@ -172,7 +175,7 @@ export function apply(ctx) {
           agent.session.header &&
           agent.session.header.cwd
         if (!cwd) throw new Error('mop_rewind: session cwd unavailable')
-        const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
+        const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
         const cp = await readExisting(fs, target)
         let seq = null
         let cpSession = null
@@ -235,7 +238,7 @@ export function apply(ctx) {
           agent.session.header.cwd
         if (!cwd)
           throw new Error('mop_checkpoint_list: session cwd unavailable')
-        const target = await fs.resolve('.dsh/memory/checkpoints.md', { cwd })
+        const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
         const cp = await readExisting(fs, target)
         const entries = cp
           .split('\n')

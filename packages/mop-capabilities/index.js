@@ -16,6 +16,9 @@ const stringOutput = {
   render: (_args, value) => [{ type: 'text', text: value }],
 }
 
+// 能力清单落点（D27，docs/design/capabilities.md）：项目 .dsh/memory/capabilities.md。
+const CAPABILITIES_REL_PATH = '.dsh/memory/capabilities.md'
+
 /** 探测一个 seam；结果条目：{ seam, ok, detail }。 */
 async function probe(ctx) {
   const results = []
@@ -102,7 +105,7 @@ export function apply(ctx) {
       agent && agent.session && agent.session.header && agent.session.header.cwd
     if (!cwd) throw new Error('mop-capabilities: session cwd unavailable')
     const results = await probe(ctx)
-    const target = await fs.resolve('.dsh/memory/capabilities.md', { cwd })
+    const target = await fs.resolve(CAPABILITIES_REL_PATH, { cwd })
     const policy = sandboxPolicy.resolve({ session: agent.session })
     await fs.writeText(
       target,
@@ -145,7 +148,7 @@ export function apply(ctx) {
           agent.session.header.cwd
         const degraded = results.filter((r) => !r.ok).map((r) => r.seam)
         return degraded.length === 0
-          ? `capabilities manifest written to ${cwd}/.dsh/memory/capabilities.md (all ${results.length} seams OK)`
+          ? `capabilities manifest written to ${cwd}/${CAPABILITIES_REL_PATH} (all ${results.length} seams OK)`
           : `capabilities manifest written (degraded: ${degraded.join(', ')})`
       },
     }),

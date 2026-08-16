@@ -11,6 +11,9 @@ const stringOutput = {
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]*$/
 
+// skill 落点（D12，docs/design/memory-design.md）：项目 .dsh/skills/<name>/，须与 skill-filesystem 发现目录对齐。
+const SKILLS_REL_DIR = '.dsh/skills'
+
 export function apply(ctx) {
   ctx.tools.register(
     defineTool({
@@ -40,7 +43,7 @@ export function apply(ctx) {
           agent.session.header &&
           agent.session.header.cwd
         if (!cwd) throw new Error('mop_learn: session cwd unavailable')
-        const dir = join(cwd, '.dsh', 'skills', name)
+        const dir = join(cwd, SKILLS_REL_DIR, name)
         const body = `---\nname: ${name}\ndescription: ${args.description.trim()}\n---\n\n${args.content.trim()}\n`
         const target = await ctx.fs.resolve(join(dir, 'SKILL.md'), { cwd })
         const policy = ctx.sandboxPolicy.resolve({ session: agent.session })
