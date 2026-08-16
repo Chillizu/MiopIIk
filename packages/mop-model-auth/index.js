@@ -1,4 +1,5 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import z from '@deepseek-ai/schemastery'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
@@ -7,17 +8,26 @@ export const name = 'mop-model-auth'
 export const inject = ['tools']
 
 // 全局模型 allowlist：每行 `provider/model`（支持 `#` 注释、`- ` list 前缀）。
-// 路径可被 MOP_MODEL_ALLOWLIST 覆盖（单测注入临时文件）。
-export const allowlistPath = () =>
-  process.env.MOP_MODEL_ALLOWLIST ||
-  join(homedir(), '.dsh', 'memory', 'global', 'model-allowlist.md')
+// 默认路径是设计契约（docs/design/model-auth.md），可经 config.allowlistPath 覆盖。
+const DEFAULT_ALLOWLIST_PATH = join(
+  homedir(),
+  '.dsh',
+  'memory',
+  'global',
+  'model-allowlist.md',
+)
+
+export const Config = z.object({
+  allowlistPath: z.string().optional(),
+})
 
 const stringOutput = {
   schema: { type: 'string' },
   render: (_args, value) => [{ type: 'text', text: value }],
 }
 
-export function apply(ctx) {
+export function apply(ctx, config = {}) {
+  const allowlistPath = () => config.allowlistPath ?? DEFAULT_ALLOWLIST_PATH
   let cache = null
 
   async function loadAllowlist() {
@@ -71,7 +81,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_model_authorize',
       description:
-        '授权一个 provider/model 供 subagent 使用：追加到全局模型 allowlist（~/.dsh/memory/global/model-allowlist.md）。资源对象授权，非动作授权。',
+        '授权一个 provider/model 供 subagent 使用：追加到全局模型 allowlist（默认 ~/.dsh/memory/global/model-allowlist.md，可经 config.allowlistPath 覆盖）。资源对象授权，非动作授权。',
       parameters: {
         provider: { type: 'string', required: true },
         model: { type: 'string', required: true },

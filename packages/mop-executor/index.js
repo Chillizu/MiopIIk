@@ -1,7 +1,19 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import z from '@deepseek-ai/schemastery'
 
 export const name = 'mop-executor'
 export const inject = ['tools', 'subagents']
+
+// 默认策略（生产由 Loader 按 Config schema 填默认值；直调 apply 时此处兜底）。
+const DEFAULT_PROVIDER = 'deepseek-official'
+const DEFAULT_MODEL = 'deepseek-v4-flash'
+const DEFAULT_MAX_OUTPUT_CHARS = 4000
+
+export const Config = z.object({
+  provider: z.string().default(DEFAULT_PROVIDER),
+  model: z.string().default(DEFAULT_MODEL),
+  maxOutputChars: z.number().int().min(0).default(DEFAULT_MAX_OUTPUT_CHARS),
+})
 
 const stringOutput = {
   schema: { type: 'string' },
@@ -41,7 +53,11 @@ function textOf(blocks) {
     .join('')
 }
 
-export function apply(ctx) {
+export function apply(ctx, config = {}) {
+  const providerDefault = config.provider ?? DEFAULT_PROVIDER
+  const modelDefault = config.model ?? DEFAULT_MODEL
+  const maxOutputChars = config.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS
+
   ctx.tools.register(
     defineTool({
       name: 'mop_spawn_executor',
@@ -54,8 +70,8 @@ export function apply(ctx) {
       },
       output: stringOutput,
       async execute(args, exec) {
-        const provider = args.provider || 'deepseek-official'
-        const model = args.model || 'deepseek-v4-flash'
+        const provider = args.provider || providerDefault
+        const model = args.model || modelDefault
         const run = await ctx.subagents.start('spawn', {
           label: `executor:${model}`,
           prompt: [{ type: 'text', text: args.prompt }],
@@ -68,11 +84,11 @@ export function apply(ctx) {
         })
         const result = await run.result
         const body = textOf(result.output)
-        const maxChars = 4000
+        const maxChars = maxOutputChars
         const truncated = body.length > maxChars
         const shown = truncated ? body.slice(0, maxChars) : body
         const suffix = truncated
-          ? '\n…[output truncated at 4000 chars; full text in the executor subagent session]'
+          ? `\n…[output truncated at ${maxOutputChars} chars; full text in the executor subagent session]`
           : ''
         return `[${result.stopReason}] ${shown}${suffix}`
       },

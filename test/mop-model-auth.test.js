@@ -11,7 +11,6 @@ const DEFAULT = { provider: 'deepseek-official', model: 'deepseek-v4-flash' }
 async function withCtx(files = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'mop-auth-'))
   const path = join(dir, 'model-allowlist.md')
-  process.env.MOP_MODEL_ALLOWLIST = path
   if (files.allowlist) await writeFile(path, files.allowlist, 'utf8')
   const listeners = {}
   const tools = {}
@@ -25,7 +24,7 @@ async function withCtx(files = {}) {
         : undefined,
     tools: { register: (t) => (tools[t.name] = t) },
   }
-  apply(ctx)
+  apply(ctx, { allowlistPath: path })
   return { dir, path, listeners, tools }
 }
 

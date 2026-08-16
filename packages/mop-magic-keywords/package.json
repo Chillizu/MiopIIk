@@ -4,10 +4,14 @@
   "type": "module",
   "main": "index.js",
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "*"
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/schemastery": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
       "optional": true
     }
   }

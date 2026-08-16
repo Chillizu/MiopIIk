@@ -3,6 +3,7 @@ import { registerHooks } from 'node:module'
 const stubs = new Map([
   ['@deepseek-ai/dsh-tools', 'dsh-tools.js'],
   ['@deepseek-ai/dsh-llm', 'dsh-llm.js'],
+  ['@deepseek-ai/schemastery', 'schemastery.js'],
 ])
 
 registerHooks({
