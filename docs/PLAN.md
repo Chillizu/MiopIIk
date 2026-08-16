@@ -101,16 +101,12 @@
 12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
 13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 mop-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
 14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
-15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（mop-executor/magic-keywords/model-auth 三包）；bundle/真实组合测试列后续 ✓
+15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（mop-executor/magic-keywords/model-auth 三包）；bundle + 真实组合测试已落地 ✓
+16. **生态形态层补全**（DSH 生态契合 60% → 形态层收口）：6 包声明 dsh.bundle patch + cordis.patch.yml（47bc72a）；README 改 bundle 姿势 + 补 model-auth/learn 两包（8bb1cba）；另 3 包路径提命名常量（6cd20f1）；三档 preset 落地 miopiik-lite（d2c24c2）；**真实组合测试**（56265e8）落地并抓出真 bug——mop-executor `z.number().int()` 真实 schemastery 不存在（mock stub no-op 掩盖），改 `z.natural()`；3 真实组合 + 30 mock 全绿 ✓
 
 待办（用户门控，需重启/实测）：
-- **D29v2 强版本实验续跑**（余额已恢复）：真实代码逻辑切片 + 隐蔽语义雷 + N≥20；任务集/缺陷/金标已冻结于 `.dsh/contracts/d29v2/`（t01–t20），跑到 t18–t20 因余额中断，续跑前核剩余 run + token 采集（补 D29 弱判别根因）
-- **代码层机械补·后续**（dsh.bundle + 真实组合测试）：方案已出（workflow 审查，deepseek-official/pro），待实施（回应 DSH 生态契合形态层 30%；Config schema 已落地）
-- ~~三档 preset 落地~~（D32）**miopiik-lite 已建**（去 delegation 组 + mop-executor，YAML 校验过，待开会话实测）；miopiik 现状 = full 档（已含 supervisor+model-auth，讨论「miopiik=3 层」系旧认知），不另建 redundant full 副本；「无 supervisor 中档」留待你定
-- ~~工具 schema 上下文实测~~（D32）**已实测：不计入**——toolFilter 在 view 层过滤，模型侧 schema 只含 visible（harness core/tools/index.ts:832/984）；真杠杆 = 少挂工具行
-- **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token；借机补 D18 run-stats 可编程出口
-- **另 3 包路径提命名常量**（capabilities/learn/tool-recovery）：`.dsh/…` 路径提为命名常量 + 注释引设计文档（不新增 Config，避免暗示存在不存在的可配置项）
-- **README 安装章节改写**：从「profiles 目录 + 绝对路径」改为 `dsh plugin --profile web add link:…`（bundle 姿势）
+- **D29v2 强版本实验续跑**（余额已恢复）：黄金基线 20/20 已过，80-run 矩阵 0/80 记录、从零开始；任务集/缺陷/金标冻结于 `.dsh/contracts/d29v2/`。**需 miopiik 会话**（本会话无 mop_spawn_executor）；续跑入口见 `.dsh/d29v2/RESUME.md`（flash 先 + early-stop 省钱顺序 + 记录/门）
+- **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token。**需 miopiik 会话 + 先冻结任务集/golden**；且 D32 已实测「隐藏 schema 不计入」削弱其省 token 动机，是否值得跑留待你定
 
 ## 6. 维护规则
 
