@@ -106,7 +106,8 @@
 17. **D18 token 出口 + H3 门重冻结**（外部评审 P1-4）：新包 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，live-first + coldSnapshot 兜底，not-found/投影不可用/全零桶三态）；H3 拆 H3-latency/H3-cost + DeepSeek V4 峰谷定价表 + 灰区/INCONCLUSIVE 口径写入 [model-routing-experiment](docs/design/model-routing-experiment.md) §3–§4；真实组合测试锚「tokenUsage 投影零桶」；44 mock + 4 组合全绿 ✓
 
 待办（用户门控，需重启/实测）：
-- **D29v2 强版本实验续跑**（类型：已跑；结论：H1 判别力确认 PASS / H2 NULL（传播=0）/ H3 墙钟代理失真未证实；raw golden 9 FAIL 全为 golden 装置缺陷待修）：执行层 40 run（flash+pro 真 rewind 均 0、20/20 规避参考材料陷阱）+ flash 监督层 20 run 完成（全部 PASS）。**遗留**：① 传播缺陷仍 0 → H2 无从判别，需重设缺陷注入口径（不提供明确 Acceptance 或把陷阱埋进正常实现细节）；② golden 装置需修（env 注入 MOP_MODEL_ALLOWLIST、readdir/listDir mock、任务依赖 t11↔t09、返回消息断言位置）；③ H3 需逐 run 精确墙钟（现已拆 H3-latency/H3-cost，token 走 `mop_run_stats`，见 D18/模型路由实验 §4）。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md)
+- **D29v2 强版本实验续跑**（类型：已跑；结论：H1 判别力确认 PASS / H2 NULL（传播=0）/ H3 墙钟代理失真未证实；raw golden 9 FAIL 全为 golden 装置缺陷待修）：执行层 40 run（flash+pro 真 rewind 均 0、20/20 规避参考材料陷阱）+ flash 监督层 20 run 完成（全部 PASS）。**遗留**：① 传播缺陷仍 0 → H2 无从判别，需重设缺陷注入口径（已定 D29v3 设计，见下）；② golden 装置需修（env 注入 MOP_MODEL_ALLOWLIST、readdir/listDir mock、任务依赖 t11↔t09、返回消息断言位置，D29v3 阻塞前置）；③ H3 需逐 run 精确墙钟（现已拆 H3-latency/H3-cost，token 走 `mop_run_stats`，见 D18/模型路由实验 §4）。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md)
+- **D29v3 监督层漏报率实验**（类型：设计已定，待冻结契约+跑批；P1-5）：根因 = 通道权威性（陷阱必须埋规范性通道 Change/规格正文，非咨询性参考材料）。四口径（A 规格内潜伏陷阱+双层契约 / A2 baseline-planted / B 涌现缺陷 / C 交叉监督）+ D34 红队 benchmark 独立实验；预注册门含 H0 前置（传播 P≥8 可行性 + P_target=20）+ 对照式 KILL（flash>20% 且 pro≤20% 才 KILL）+ H3-latency/cost；fallback 阶梯 A→B→A2→D34 写进契约。**阻塞前置 = golden 装置修复 + 三态自检**。设计见 [d29v3-experiment-design](docs/design/d29v3-experiment-design.md)
 - **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token。**需 miopiik 会话 + 先冻结任务集/golden**；且 D32 已实测「隐藏 schema 不计入」削弱其省 token 动机，是否值得跑留待你定
 
 ## 6. 维护规则

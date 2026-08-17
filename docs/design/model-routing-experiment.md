@@ -54,3 +54,7 @@
 - [x] 注入缺陷清单（每切片 2 个，共 12 雷）—— `.dsh/contracts/d29/defects.md`（仅审查层）
 - [x] 跑双配置，记录 rewind 率 / 漏报率 / token / 墙钟 —— 24 run 完成，明细见 `.dsh/d29/results/results.md`（墙钟为粗界代理，token 不可编程采集，如实标注）
 - [x] 按门判定，回写 D19 状态（待验证 → **初步确认，弱判别**）—— 全门 PASS，见 [d29-experiment-report](../../docs/review/d29-experiment-report.md)
+
+## 6. D29v3（监督层漏报率）
+
+D29v2 因注入缺陷传播=0 使 H2 无分母（NULL）。D29v3 的方法论 + 预注册门 + fallback 决策树见 [d29v3-experiment-design.md](d29v3-experiment-design.md)；冻结契约前必须先过其 §6 前置（golden 装置修复为阻塞项）。
