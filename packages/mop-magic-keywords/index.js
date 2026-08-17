@@ -11,7 +11,9 @@ const DEFAULT_NOTICES = {
 }
 
 // 关键词列表由 notices 的键派生，单一 dict 保证「关键词 ↔ 文案」不脱节。
+// enabled=false 关闭整条隐式控制流；notices 与默认合并（增改不整体替换默认）。
 export const Config = z.object({
+  enabled: z.boolean().default(true),
   notices: z.dict(z.string()).default(DEFAULT_NOTICES),
 })
 
@@ -47,13 +49,16 @@ function matcherFor(kw) {
 }
 
 export function apply(ctx, config = {}) {
-  const notices = config.notices ?? DEFAULT_NOTICES
+  const enabled = config.enabled ?? true
+  // 合并而非整体替换：用户覆盖/新增单个 notice 不丢失默认 ultrathink/workflowz。
+  const notices = { ...DEFAULT_NOTICES, ...(config.notices ?? {}) }
   const matchers = Object.fromEntries(
     Object.keys(notices).map((kw) => [kw, matcherFor(kw)]),
   )
   ctx.on('agent/pre-step', async (payload, next) => {
     const decision = await next()
     if (decision.kind === 'reject') return decision
+    if (!enabled) return decision
     const prose = proseOnly(textOf(payload.messages))
     if (!prose) return decision
     const hits = Object.keys(notices).filter((kw) => matchers[kw](prose))

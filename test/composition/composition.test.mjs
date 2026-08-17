@@ -11,6 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const CONFIG = join(here, 'cordis.yml')
 const CONFIG_WITH_MOP = join(here, 'cordis.with-mop.yml')
 const CONFIG_WITH_RUN_STATS = join(here, 'cordis.with-run-stats.yml')
+const CONFIG_MIOPIIK = join(here, 'cordis.miopiik-example.yml')
 
 /** The real boot entry: packages/boot/app-boot/src/index.ts:757 (built lib). */
 let boot
@@ -132,5 +133,31 @@ test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
     })
   } finally {
     await ctx3.fiber.dispose()
+  }
+})
+
+test('MiOpIIk 层挂载 smoke：7 mop + planner/supervisor delegation 经真实 Loader 可挂载', async () => {
+  // 证明 MiOpIIk 层（7 个 mop 包 + planner/supervisor 层派发行）的 inject 联合被
+  // 真实 DSH 服务满足、可整体挂载——而不只是各自 mock register。persona 行不在本
+  // fixture（需 agent-scoped context），由真实 dsh 会话的 standingKeyFor 验证。
+  const ctx4 = await boot('mop-composition', CONFIG_MIOPIIK)
+  try {
+    const entries = [...ctx4.loader.entries()]
+    for (const id of [
+      'mop-tool-recovery',
+      'mop-magic-keywords',
+      'mop-capabilities',
+      'mop-executor',
+      'mop-learn',
+      'mop-model-auth',
+      'mop-run-stats',
+      'tool-subagent-planner',
+      'tool-subagent-supervisor',
+    ]) {
+      const entry = entries.find((e) => e.options.id === id)
+      assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
+    }
+  } finally {
+    await ctx4.fiber.dispose()
   }
 })

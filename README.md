@@ -9,9 +9,9 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 本仓库是 **MiOpIIk 的 DSH 插件集合**，不是可直接安装的完整发行包。文档描述的三层 + 监督层系统由两部分组成：
 
 - **本仓库（插件集合）**：7 个 `mop-*` 插件包 + 测试 + 设计文档。
-- **MiOpIIk agent preset（完整 profile）**：persona、Cordis 组合行（planner / executor / supervisor 工具编排）——位于本机 `${DSH_HOME}/.agent-presets/miopiik/`（`agent.cordis.yml` + `preset.yml`），**不在本仓库**。定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（其中 `executor.prompt.md` 逐字同步进 `mop-executor` 的 `EXECUTOR_PERSONA`）。
+- **MiOpIIk agent preset（完整 profile）**：persona、Cordis 组合行（planner / executor / supervisor 工具编排）——位于本机 `${DSH_HOME}/.agent-presets/miopiik/`（`agent.cordis.yml` + `preset.yml`），**不在本仓库**。脱敏可重建模板见 [`examples/miopiik/`](examples/miopiik/)（无凭据/allowlist/用户路径）。定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（其中 `executor.prompt.md` 逐字同步进 `mop-executor` 的 `EXECUTOR_PERSONA`；review/planner/supervisor 经 `persona-sync` 测试钉住 `examples/miopiik` 副本）。
 
-仅凭本仓库无法重建完整系统：它是「可安装的插件层」，需叠加本机 preset 才是完整 MiOpIIk。插件层与本机 preset 的关系见[安装](#安装)。
+仅凭本仓库无法重建完整系统：它是「可安装的插件层」，需叠加 preset 才是完整 MiOpIIk。插件层与本机 preset 的关系见[安装](#安装)。DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（7 包）
 

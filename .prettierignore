@@ -1,2 +1,5 @@
 node_modules/
 docs/
+# 逐字镜像 live preset（${DSH_HOME}/.agent-presets/miopiik/），格式须与 live 一致
+# 供 persona-sync 逐字比对，不套 prettier（否则块标量重排版会破坏同步）。
+examples/miopiik/agent.cordis.yml

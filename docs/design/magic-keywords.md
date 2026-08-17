@@ -48,3 +48,12 @@
 
 - PASS：ultrathink/workflowz 在正文触发、在代码块/路径中不触发；orchestrate 常驻段让规划层禁止串行派发；
 - KILL：关键词误触发导致执行层收到编排契约（执行层必须无注入）。
+
+## 6. 隐式控制流（开关 + 合并语义）
+
+关键词触发是**隐式控制流**：正文命中即注入 notice，用户无法从工具列表直接发现。本包提供：
+
+- `Config.enabled: boolean`（默认 `true`）——`false` 关闭整条注入，用于需要完全可控的评测/对比场景；
+- `Config.notices` 与默认 **合并**（`{...DEFAULT_NOTICES, ...config.notices}`），用户新增/覆盖单个关键词不会整体替换默认、丢掉 `ultrathink`/`workflowz`。
+
+触发记录与显式 slash command 是后续方向（不阻塞 v1）。

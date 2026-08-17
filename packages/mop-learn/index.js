@@ -33,8 +33,10 @@ export function apply(ctx) {
           throw new Error(
             `mop_learn: invalid skill name "${name}" (kebab-case, no leading hyphen)`,
           )
-        if (!(args.description || '').trim())
-          throw new Error('mop_learn: description required')
+        const description = (args.description || '').trim()
+        if (!description) throw new Error('mop_learn: description required')
+        if (/[\r\n]/.test(description))
+          throw new Error('mop_learn: description 必须为单行（禁止换行）')
         if (!(args.content || '').trim())
           throw new Error('mop_learn: content required')
         const replace = args.replace === true
@@ -46,7 +48,9 @@ export function apply(ctx) {
           agent.session.header.cwd
         if (!cwd) throw new Error('mop_learn: session cwd unavailable')
         const dir = join(cwd, SKILLS_REL_DIR, name)
-        const body = `---\nname: ${name}\ndescription: ${args.description.trim()}\n---\n\n${args.content.trim()}\n`
+        // description 用 JSON.stringify 序列化为 YAML 双引号串：引号/冒号/#/--- 等
+        // 特殊字符不会破坏 frontmatter（skill-filesystem 用真 YAML 解析器，已核实）。
+        const body = `---\nname: ${name}\ndescription: ${JSON.stringify(description)}\n---\n\n${args.content.trim()}\n`
         const target = await ctx.fs.resolve(join(dir, 'SKILL.md'), { cwd })
         const policy = ctx.sandboxPolicy.resolve({ session: agent.session })
         // 无覆盖保护：skill 是持久化记忆资产，静默覆盖危险。默认 createIfAbsent；

@@ -74,3 +74,50 @@ test('keyword followed by CJK punctuation triggers', async () => {
   assert.equal(decision.messages.length, 1)
   assert.match(injectedText(decision), /ultrathink/)
 })
+
+function listenerWithConfig(config) {
+  let listener
+  const ctx = {
+    on: (_event, fn) => {
+      listener = fn
+    },
+  }
+  apply(ctx, config)
+  return listener
+}
+
+test('enabled=false 关闭整条隐式控制流', async () => {
+  const listener = listenerWithConfig({ enabled: false })
+  const decision = await listener(
+    {
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'please ultrathink' }],
+        },
+      ],
+    },
+    async () => ({ kind: 'enter', messages: [] }),
+  )
+  assert.equal(decision.messages.length, 0)
+})
+
+test('自定义 notices 与默认合并，不整体替换默认', async () => {
+  const listener = listenerWithConfig({
+    notices: { focusmode: '【focusmode】聚焦单线程推进。' },
+  })
+  const decision = await listener(
+    {
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'ultrathink then focusmode' }],
+        },
+      ],
+    },
+    async () => ({ kind: 'enter', messages: [] }),
+  )
+  const text = injectedText(decision)
+  assert.match(text, /ultrathink/) // 默认仍保留
+  assert.match(text, /focusmode/) // 新增关键词也生效
+})

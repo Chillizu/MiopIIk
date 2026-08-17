@@ -114,6 +114,19 @@ test('mop_model_authorize 拒绝空参数', async () => {
   )
 })
 
+test('并发 authorize 不丢更新：两个不同模型都落盘', async () => {
+  const { tools, path } = await withCtx()
+  const [a, b] = await Promise.all([
+    tools['mop_model_authorize'].execute({ provider: 'p1', model: 'm1' }),
+    tools['mop_model_authorize'].execute({ provider: 'p2', model: 'm2' }),
+  ])
+  assert.match(a, /authorized: p1\/m1/)
+  assert.match(b, /authorized: p2\/m2/)
+  const raw = await readFile(path, 'utf8')
+  assert.match(raw, /p1\/m1/)
+  assert.match(raw, /p2\/m2/)
+})
+
 test('mop_model_list 显示默认 + allowlist', async () => {
   const { tools } = await withCtx({
     allowlist: 'deepseek-official/deepseek-v4-pro\n',

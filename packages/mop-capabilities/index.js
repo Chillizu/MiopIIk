@@ -77,16 +77,25 @@ async function probe(ctx) {
   return results
 }
 
+// markdown 表格单元格转义：换行折叠、`|` 转义，防异常消息破坏表格格式。
+function escapeCell(value) {
+  return String(value)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\|/g, '\\|')
+}
+
 function renderManifest(results, cwd) {
+  const degraded = results.filter((r) => !r.ok).length
+  const status = degraded === 0 ? 'OK' : 'DEGRADED'
   const rows = results
     .map(
       (r) =>
-        `| \`${r.seam}\` | ${r.ok ? '[OK]' : '[DEGRADED]'} | ${r.detail} |`,
+        `| \`${r.seam}\` | ${r.ok ? '[OK]' : '[DEGRADED]'} | ${escapeCell(r.detail)} |`,
     )
     .join('\n')
   return `# DSH Capabilities（能力清单）
 
-> 探测时间：${new Date().toISOString()} | cwd：${cwd} | 由 \`@chillizu/mop-capabilities\` 生成。
+> 探测时间：${new Date().toISOString()} | status：${status} | cwd：${cwd} | 由 \`@chillizu/mop-capabilities\` 生成。
 > 读此文件了解当前部署 seam 可用性；**勿凭记忆假设上游契约**（DSH 尚在 rc，seam 语义可能流动）。
 
 ## 探测结果
@@ -107,17 +116,24 @@ export function apply(ctx) {
     const results = await probe(ctx)
     const target = await fs.resolve(CAPABILITIES_REL_PATH, { cwd })
     const policy = sandboxPolicy.resolve({ session: agent.session })
+    // CAS 写入：观测版本 → replaceIfVersion；缺失 → createIfAbsent。多 root agent
+    // 并发探测时不会盲覆盖他人已写的清单（冲突抛 FS_NOT_OBSERVED / FS_STALE_VERSION）。
+    const info = await fs.stat(target)
     await fs.writeText(
       target,
       renderManifest(results, cwd),
-      undefined,
+      info === undefined
+        ? { kind: 'createIfAbsent' }
+        : { kind: 'replaceIfVersion', version: info.version },
       undefined,
       policy,
     )
     return results
   }
 
-  // 根会话（depth 0）启动时自动探测一次；子代理各自不再重复写。
+  // 根会话（depth 0）启动时自动探测一次；子代理各自不再重复写。best-effort 异步：
+  // 首次工作可能早于 manifest 完成——读清单时检查 status/时间戳，缺失则显式调
+  // mop_probe_capabilities。写失败只 console.error，不崩启动。
   ctx.on('agent/created', (payload) => {
     const agent = payload && payload.agent
     const depth =
@@ -135,7 +151,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_probe_capabilities',
       description:
-        'Probe DSH seam availability and write the capability manifest to .dsh/memory/capabilities.md. Call at session start to detect upstream drift instead of assuming contracts from memory.',
+        'Probe DSH seam availability and write the capability manifest (with status OK/DEGRADED) to .dsh/memory/capabilities.md. Call at session start to detect upstream drift instead of assuming contracts from memory; the startup auto-probe is best-effort (async), so call this explicitly to guarantee the manifest is fresh before work.',
       parameters: {},
       output: stringOutput,
       async execute(_args, exec) {

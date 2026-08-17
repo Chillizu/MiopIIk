@@ -1,6 +1,6 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, appendFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -34,6 +34,18 @@ const stringOutput = {
 export function apply(ctx, config = {}) {
   const allowlistPath = () => config.allowlistPath ?? DEFAULT_ALLOWLIST_PATH
   let cache = null
+
+  // 授权写入串行化（进程内）：check-then-append 整段入锁，防并发 authorize 丢更新
+  // （lost-update）。跨进程由 appendFile 的 O_APPEND 原子追加兜底。
+  let authQueue = Promise.resolve()
+  function withAuthLock(fn) {
+    const run = authQueue.then(fn, fn)
+    authQueue = run.then(
+      () => {},
+      () => {},
+    )
+    return run
+  }
 
   async function loadAllowlist() {
     if (cache !== null) return cache
@@ -109,20 +121,24 @@ export function apply(ctx, config = {}) {
         if (!provider || !model)
           throw new Error('mop_model_authorize: provider 和 model 必填')
         const key = `${provider}/${model}`
-        const set = await loadAllowlist()
-        if (set.has(key)) return `already authorized: ${key}`
-        const path = allowlistPath()
-        await mkdir(dirname(path), { recursive: true })
-        let raw = ''
-        try {
-          raw = await readFile(path, 'utf8')
-        } catch {
-          /* 不存在则新建 */
-        }
-        const sep = raw && !raw.endsWith('\n') ? '\n' : ''
-        await writeFile(path, `${raw}${sep}${key}\n`, 'utf8')
-        set.add(key)
-        return `authorized: ${key}`
+        // 整段 check-then-append 入锁：set.has 早退也在锁内，否则两个并发调用
+        // 会同时通过 exists 检查并追加重复行。
+        return withAuthLock(async () => {
+          const set = await loadAllowlist()
+          if (set.has(key)) return `already authorized: ${key}`
+          const path = allowlistPath()
+          await mkdir(dirname(path), { recursive: true })
+          let raw = ''
+          try {
+            raw = await readFile(path, 'utf8')
+          } catch {
+            /* 不存在则新建 */
+          }
+          const sep = raw && !raw.endsWith('\n') ? '\n' : ''
+          await appendFile(path, `${sep}${key}\n`, 'utf8')
+          set.add(key)
+          return `authorized: ${key}`
+        })
       },
     }),
   )

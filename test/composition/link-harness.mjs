@@ -45,6 +45,24 @@ const FIXTURE_LINKS = [
     'packages/session/session-projection',
   ],
   ['@deepseek-ai', 'dsh-token-meter', 'packages/llm/token-meter'],
+  ['@deepseek-ai', 'dsh-fs-sandbox', 'packages/fs/fs-sandbox'],
+  ['@deepseek-ai', 'dsh-sandbox-policy', 'packages/sandbox/sandbox-policy'],
+  [
+    '@deepseek-ai',
+    'dsh-fs-observation-policy',
+    'packages/fs/fs-observation-policy',
+  ],
+  [
+    '@deepseek-ai',
+    'dsh-session-persistence-jsonl',
+    'packages/session/session-persistence-jsonl',
+  ],
+  [
+    '@deepseek-ai',
+    'dsh-session-query-sqlite',
+    'packages/session-query/session-query-sqlite',
+  ],
+  ['@deepseek-ai', 'dsh-tool-subagent', 'packages/subagent/tool-subagent'],
 ]
 
 // [scope, name, target-under-harness] — mop-executor's own imports
@@ -76,8 +94,11 @@ export function ensureLinks() {
   }
   // The Config-schema mop packages the composition tests mount.
   for (const name of [
+    'mop-tool-recovery',
     'mop-executor',
     'mop-magic-keywords',
+    'mop-capabilities',
+    'mop-learn',
     'mop-model-auth',
     'mop-run-stats',
   ]) {
