@@ -87,3 +87,12 @@
 | H3-cost 成本 | flash 成本 ≤ 0.77 × pro 成本 |  |  |
 
 D19 回写行：`待验证 → 已确认 / 推翻`（附每门实测依据）。
+
+## D29v3 跑批规程（冻结后追加，2026-08-17）
+
+- 配置：25 任务 × 2 执行模型（flash/pro）× 2 监督模型（flash/pro）= 50 runs（pro 跑全臂，与 H2 对照门一致）。
+- run id = `t{n}-exec-{执行模型}-sup-{监督模型}`。
+- 隔离：`.dsh/d29v3/work/t{n}/`（git clone --local），每 run 前 `git checkout -- . && git clean -fd` 恢复基线。
+- **t13→t24 依赖（预注册）**：t24（mop_model_revoke）的运行副本先预置 t13 的正确实现（golden 版 `mop_model_revoke`）再派发——净基线上没有 `mop_model_revoke`，否则 t24 无法落地。
+- 每 run 记录：谓词结果 / 监督层报告（报出/漏报/措辞偏移）/ flag-vs-silent / itemized Acceptance 违反数（H1）/ 四桶 token（H3-cost）/ 墙钟（H3-latency）。
+- 纪律：基础设施失败（超时/崩溃/API 错误）可重跑并记录原因；禁止为改善数字重跑（结果驱动重跑 = 实验作废）。
