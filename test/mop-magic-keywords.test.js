@@ -52,3 +52,25 @@ test('two keywords in one message inject both notices', async () => {
   assert.match(text, /ultrathink/)
   assert.match(text, /workflowz/)
 })
+
+test('keyword embedded in a longer ASCII word does not trigger', async () => {
+  const decision = await run('this is superultrathink territory')
+  assert.equal(decision.messages.length, 0)
+})
+
+test('keyword with ASCII suffix does not trigger', async () => {
+  const decision = await run('stop ultrathinking now')
+  assert.equal(decision.messages.length, 0)
+})
+
+test('keyword in CJK context triggers (CJK is a natural boundary)', async () => {
+  const decision = await run('请用ultrathink来做这件事')
+  assert.equal(decision.messages.length, 1)
+  assert.match(injectedText(decision), /ultrathink/)
+})
+
+test('keyword followed by CJK punctuation triggers', async () => {
+  const decision = await run('ultrathink、然后 workflowz')
+  assert.equal(decision.messages.length, 1)
+  assert.match(injectedText(decision), /ultrathink/)
+})

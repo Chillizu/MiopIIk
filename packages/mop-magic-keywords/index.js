@@ -31,14 +31,32 @@ function proseOnly(text) {
   return text.replace(/```[\s\S]*?```/g, ' ').replace(/`[^`]*`/g, ' ')
 }
 
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// ASCII 词边界：superultrathink / ultrathinking 不触发，CJK 上下文（用ultrathink）仍触发。
+// JS 无 u 标志的 \b 只按 ASCII 分词，中文/标点是天然边界，正是所需语义。
+function matcherFor(kw) {
+  if (/^[A-Za-z0-9_]+$/.test(kw)) {
+    const re = new RegExp(`\\b${escapeRegExp(kw)}\\b`)
+    return (prose) => re.test(prose)
+  }
+  // 非 ASCII（CJK/标点）关键词无词边界概念，退回字面包含
+  return (prose) => prose.includes(kw)
+}
+
 export function apply(ctx, config = {}) {
   const notices = config.notices ?? DEFAULT_NOTICES
+  const matchers = Object.fromEntries(
+    Object.keys(notices).map((kw) => [kw, matcherFor(kw)]),
+  )
   ctx.on('agent/pre-step', async (payload, next) => {
     const decision = await next()
     if (decision.kind === 'reject') return decision
     const prose = proseOnly(textOf(payload.messages))
     if (!prose) return decision
-    const hits = Object.keys(notices).filter((kw) => prose.includes(kw))
+    const hits = Object.keys(notices).filter((kw) => matchers[kw](prose))
     if (hits.length === 0) return decision
     const notice = hits.map((kw) => notices[kw]).join('\n')
     const msg = createUserMessage({
