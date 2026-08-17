@@ -91,7 +91,7 @@ D29v2 用「缺陷注入进参考材料段」，执行层按 Acceptance 执行�
 
 ## 7. TODO
 
-- [ ] golden 装置修复 + 三态自检门（阻塞前置，另开 D29v3 前置任务）
-- [ ] 任务集扩充 ≥40–60 + 每陷阱可推导性审计
+- [x] golden 装置修复 + 三态自检门（阻塞前置）：D29v2 6 类 rig 缺陷（env 注入/readdir mock/任务依赖/返回消息断言位置）已修；`fixtures/self-check.sh` + 6 个参考实现（`fixtures/reference/tNN/`）跑通——干净基线全 FAIL（判别力）+ 正确参考实现全 PASS（不再 buggy），6/6 通过。
+- [ ] 任务集扩充 ≥40–60 + 每陷阱可推导性审计 + 陷阱传播谓词（三态自检门第 3 态，属 D29v3 注入口径）
 - [ ] 冻结 `.dsh/contracts/d29v3/`（README + adjudication-protocol + 决策树）
 - [ ] miopiik 会话跑批（A 口径起步，按 §4 早停）
