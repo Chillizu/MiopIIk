@@ -63,11 +63,18 @@ The full **real-boot** checks here (`boot()` through the harness Loader, real
 spawn-driver error, real token-meter projection folding) need a built harness
 checkout (`/opt/deepseek-harness`). They run in a separate workflow
 (`.github/workflows/composition.yml`) on **manual dispatch + weekly schedule**,
-which checks out `deepseek-ai/deepseek-harness` at a pinned ref, builds
-`build:lib:host`, and runs `npm run test:composition`. They are deliberately
-**not** in the push gate: a full harness `pnpm install` + `build:lib:host` is too
-heavy and too fragile against a fast-moving rc harness for free runners.
+which checks out `deepseek-ai/deepseek-harness` on two matrix legs, builds
+`build:lib:host`, and runs `npm run test:composition`:
+
+- **pinned** (known-good commit) — a **gate**: failure = a real mop regression
+  against that snapshot.
+- **master** (harness HEAD) — **warning only** (`continue-on-error`): the leg that
+  catches upstream seam drift as the rc harness moves; it does not block because
+  master can fail for harness-internal reasons unrelated to mop.
+
+They are deliberately **not** in the push gate: a full harness `pnpm install` +
+`build:lib:host` is too heavy for free runners.
 
 **Push CI green ⇒ mock green, not composition green.** Run
-`npm run test:composition` locally before a release, and re-run the composition
-workflow against a fresh harness ref when upstream seams change.
+`npm run test:composition` locally before a release; the weekly `master` leg
+surfaces upstream seam drift, and the `pinned` leg gives a reproducible gate.

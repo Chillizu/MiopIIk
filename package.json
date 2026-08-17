@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.15"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Chillizu/mop-plugins.git"
