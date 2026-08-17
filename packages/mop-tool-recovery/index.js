@@ -108,6 +108,17 @@ export function apply(ctx) {
   // sessionId -> { disposer, text }；规则状态按会话隔离，避免多会话互相覆盖。
   const ruleState = new Map()
 
+  // 会话 dispose 时清理该会话的注入规则状态，避免长期运行进程累积无效条目。
+  // agent/disposed payload = { agent }；disposer 幂等，已清理过则安全 no-op。
+  ctx.on('agent/disposed', (payload) => {
+    const agent = payload && payload.agent
+    const sid = agent && agent.session ? agent.session.id : null
+    if (sid === null) return
+    const state = ruleState.get(sid)
+    if (state !== undefined && state.disposer) state.disposer()
+    ruleState.delete(sid)
+  })
+
   tools.register(
     defineTool({
       name: 'mop_checkpoint',
@@ -127,6 +138,15 @@ export function apply(ctx) {
           agent.session.header &&
           agent.session.header.cwd
         if (!cwd) throw new Error('mop_checkpoint: session cwd unavailable')
+        // 校验 label/note：禁止换行与 `|`（checkpoint 行分隔符）。否则会注入伪行或
+        // 错位字段，破坏 parseCheckpointLine round-trip 与 mop_rewind 的精确 label 匹配。
+        const label = String(args.label ?? '').trim()
+        if (!label) throw new Error('mop_checkpoint: label required')
+        if (/[\r\n|]/.test(label))
+          throw new Error('mop_checkpoint: label 不得包含换行或 "|" 分隔符')
+        const note = args.note == null ? undefined : String(args.note).trim()
+        if (note !== undefined && /[\r\n|]/.test(note))
+          throw new Error('mop_checkpoint: note 不得包含换行或 "|" 分隔符')
         let sid
         let events
         if (args.sessionId) {
@@ -141,10 +161,10 @@ export function apply(ctx) {
         }
         const boundary = lastTurnEndSeq(events)
         const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
-        const line = formatCheckpointLine(args.label, sid, boundary, args.note)
+        const line = formatCheckpointLine(label, sid, boundary, note)
         const policy = sandboxPolicy.resolve({ session: agent.session })
         await appendCheckpoint(fs, target, line, policy)
-        return `checkpoint OK: ${args.label} @ session ${sid} seq ${boundary}`
+        return `checkpoint OK: ${label} @ session ${sid} seq ${boundary}`
       },
     }),
   )

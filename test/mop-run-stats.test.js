@@ -151,3 +151,22 @@ test('输出键序稳定（contract anchor）', async () => {
     'totalOutputTokens',
   ])
 })
+
+test('token 桶非有限非负数值 → 报错（不污染求和）', async () => {
+  for (const bad of [Number.NaN, -1, '100']) {
+    const tool = captureTool({
+      sessions: { get: () => undefined },
+      sessionProjectionCache: {
+        coldSnapshot: async () => ({
+          asOfSeq: 3,
+          values: { tokenUsage: { ...BUCKETS, outputTokens: bad } },
+        }),
+      },
+    })
+    await assert.rejects(
+      () => tool.execute({ sessionId: 's-1' }),
+      /tokenUsage\.outputTokens 非有限非负数值/,
+      `bucket=${String(bad)} 应报错`,
+    )
+  }
+})

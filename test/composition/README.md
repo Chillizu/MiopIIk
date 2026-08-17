@@ -54,11 +54,20 @@ harness process's inherited `npm_*` env vars; running tests with a clean env
 
 ## CI coverage boundary (P1-6)
 
-CI (`.github/workflows/ci.yml`) runs `check`/`lint`/`format:check`/`npm test`.
-The mock tests (`npm test`) now exercise **real schemastery** for every package's
-`Config` (see §3), so Config-contract regressions are caught in CI. What CI still
-cannot cover: the full **real-boot** checks here (`boot()` through the harness
-Loader, real spawn-driver error, real token-meter projection folding) — those
-need a built harness checkout (`/opt/deepseek-harness`) that is not available on
-free GitHub runners. **CI green ⇒ mock green, not composition green.** Run
-`npm run test:composition` locally before a release.
+CI runs `check`/`lint`/`format:check`/`npm test` on every push/PR
+(`.github/workflows/ci.yml`). The mock tests (`npm test`) now exercise **real
+schemastery** for every package's `Config` (see §3), so Config-contract
+regressions are caught on the push gate.
+
+The full **real-boot** checks here (`boot()` through the harness Loader, real
+spawn-driver error, real token-meter projection folding) need a built harness
+checkout (`/opt/deepseek-harness`). They run in a separate workflow
+(`.github/workflows/composition.yml`) on **manual dispatch + weekly schedule**,
+which checks out `deepseek-ai/deepseek-harness` at a pinned ref, builds
+`build:lib:host`, and runs `npm run test:composition`. They are deliberately
+**not** in the push gate: a full harness `pnpm install` + `build:lib:host` is too
+heavy and too fragile against a fast-moving rc harness for free runners.
+
+**Push CI green ⇒ mock green, not composition green.** Run
+`npm run test:composition` locally before a release, and re-run the composition
+workflow against a fresh harness ref when upstream seams change.

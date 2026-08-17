@@ -8,7 +8,11 @@ function makeCtx(overrides = {}) {
   const registered = []
   const writes = []
   const creates = []
+  const listeners = {}
   const ctx = {
+    on: (event, fn) => {
+      listeners[event] = fn
+    },
     tools: {
       register: (tool) => {
         registered.push(tool)
@@ -37,7 +41,7 @@ function makeCtx(overrides = {}) {
     },
     ...overrides,
   }
-  return { ctx, registered, writes, creates }
+  return { ctx, registered, writes, creates, listeners }
 }
 
 function agent(id) {
@@ -301,4 +305,54 @@ test('checkpoint write retries on concurrent version conflict', async () => {
   assert.equal(expected[0].kind, 'replaceIfVersion')
   assert.equal(expected[0].version, 1)
   assert.equal(expected[1].version, 2)
+})
+
+test('mop_checkpoint rejects label containing newline or pipe', async () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  const cp = registered.find((t) => t.name === 'mop_checkpoint')
+  await assert.rejects(
+    () => cp.execute({ label: 'bad\nlabel' }, { agent: agent('session-a') }),
+    /label 不得包含/,
+  )
+  await assert.rejects(
+    () => cp.execute({ label: 'bad|label' }, { agent: agent('session-a') }),
+    /label 不得包含/,
+  )
+})
+
+test('mop_checkpoint rejects note containing newline or pipe', async () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  const cp = registered.find((t) => t.name === 'mop_checkpoint')
+  await assert.rejects(
+    () =>
+      cp.execute(
+        { label: 'ok', note: 'bad\nnote' },
+        { agent: agent('session-a') },
+      ),
+    /note 不得包含/,
+  )
+  await assert.rejects(
+    () =>
+      cp.execute(
+        { label: 'ok', note: 'bad|note' },
+        { agent: agent('session-a') },
+      ),
+    /note 不得包含/,
+  )
+})
+
+test('agent/disposed cleans up injected rule state', () => {
+  const { ctx, registered, listeners } = makeCtx()
+  apply(ctx)
+  const inject = registered.find((t) => t.name === 'mop_rule_inject')
+  const show = registered.find((t) => t.name === 'mop_rule_show')
+  inject.execute({ text: 'rule for A' }, { agent: agent('session-a') })
+  assert.equal(show.execute({}, { agent: agent('session-a') }), 'rule for A')
+  listeners['agent/disposed']({ agent: agent('session-a') })
+  assert.equal(
+    show.execute({}, { agent: agent('session-a') }),
+    '(no rule injected)',
+  )
 })

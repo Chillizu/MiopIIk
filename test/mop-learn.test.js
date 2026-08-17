@@ -14,6 +14,7 @@ test('mop_learn mints a SKILL.md with frontmatter', async () => {
     tools: { register: (t) => registered.push(t) },
     fs: {
       resolve: async (path) => ({ path }),
+      stat: async () => undefined,
       writeText: async (_t, content) => {
         writes.push({ content })
       },
@@ -40,7 +41,11 @@ test('mop_learn rejects invalid name / empty fields', async () => {
   const registered = []
   const ctx = {
     tools: { register: (t) => registered.push(t) },
-    fs: { resolve: async (p) => ({ path: p }), writeText: async () => {} },
+    fs: {
+      resolve: async (p) => ({ path: p }),
+      stat: async () => undefined,
+      writeText: async () => {},
+    },
     sandboxPolicy: { resolve: () => ({}) },
   }
   apply(ctx)
@@ -61,4 +66,58 @@ test('mop_learn rejects invalid name / empty fields', async () => {
       ),
     /description required/,
   )
+})
+
+function learnCtx({ exists = false, version = 'v1' } = {}) {
+  const registered = []
+  const writes = []
+  const ctx = {
+    tools: { register: (t) => registered.push(t) },
+    fs: {
+      resolve: async (path) => ({ path }),
+      stat: async () => (exists ? { version } : undefined),
+      writeText: async (_t, _content, intent) => {
+        writes.push({ intent })
+      },
+    },
+    sandboxPolicy: { resolve: () => ({}) },
+  }
+  apply(ctx)
+  return { registered, writes }
+}
+
+test('mop_learn refuses to overwrite an existing skill without replace', async () => {
+  const { registered } = learnCtx({ exists: true })
+  const tool = registered.find((t) => t.name === 'mop_learn')
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { name: 'deploy-check', description: 'x', content: 'y' },
+        { agent: agent() },
+      ),
+    /already exists.*replace:true/,
+  )
+})
+
+test('mop_learn replace:true writes via CAS replaceIfVersion', async () => {
+  const { registered, writes } = learnCtx({ exists: true, version: 'v7' })
+  const tool = registered.find((t) => t.name === 'mop_learn')
+  const result = await tool.execute(
+    { name: 'deploy-check', description: 'x', content: 'y', replace: true },
+    { agent: agent() },
+  )
+  assert.match(result, /skill replaced/)
+  assert.equal(writes[0].intent.kind, 'replaceIfVersion')
+  assert.equal(writes[0].intent.version, 'v7')
+})
+
+test('mop_learn new skill writes via createIfAbsent', async () => {
+  const { registered, writes } = learnCtx({ exists: false })
+  const tool = registered.find((t) => t.name === 'mop_learn')
+  const result = await tool.execute(
+    { name: 'deploy-check', description: 'x', content: 'y' },
+    { agent: agent() },
+  )
+  assert.match(result, /skill minted/)
+  assert.equal(writes[0].intent.kind, 'createIfAbsent')
 })

@@ -1,0 +1,60 @@
+name: Composition
+
+# REAL-composition gate (test/composition/): boot the mop packages through the
+# real DSH harness Cordis Loader instead of the register-mocks stubs. This is NOT
+# in the push/PR gate (ci.yml) because a full harness pnpm install + build:lib:host
+# is too heavy and too fragile against a fast-moving rc harness for free runners;
+# run it manually (workflow_dispatch) or weekly (schedule) to catch upstream seam
+# drift that the mock tests cannot see. See test/composition/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dsh_ref:
+        description: 'DSH harness ref (commit / tag / branch) to build against'
+        required: false
+        default: '47f943859bef60e4160492346772ded9b24f765a'
+  schedule:
+    - cron: '0 4 * * 1' # weekly Monday 04:00 UTC
+
+jobs:
+  composition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mop-plugins
+        uses: actions/checkout@v4
+        with:
+          path: mop-plugins
+
+      - name: Checkout DSH harness
+        uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ github.event.inputs.dsh_ref || '47f943859bef60e4160492346772ded9b24f765a' }}
+          path: harness
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install + build harness (host lib only)
+        working-directory: harness
+        run: |
+          pnpm install --frozen-lockfile
+          npm run build:lib:host
+
+      - name: Install mop-plugins
+        working-directory: mop-plugins
+        run: npm ci
+
+      - name: Run REAL-composition tests
+        working-directory: mop-plugins
+        env:
+          DSH_HARNESS_ROOT: ${{ github.workspace }}/harness
+        run: npm run test:composition

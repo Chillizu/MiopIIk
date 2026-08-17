@@ -9,6 +9,10 @@ export const inject = ['tools']
 
 // 全局模型 allowlist：每行 `provider/model`（支持 `#` 注释、`- ` list 前缀）。
 // 默认路径是设计契约（docs/design/model-auth.md），可经 config.allowlistPath 覆盖。
+//
+// 可信配置路径：allowlist 是全局主机级配置（~/.dsh/memory/global/…），非工作区产物，
+// 故直接经 node:fs/promises 读写，不经 DSH fs/sandboxPolicy seam。这是有意设计，
+// 不是 sandbox 绕过——工作区内的写仍受 sandbox 约束；此文件是用户显式维护的授权清单。
 const DEFAULT_ALLOWLIST_PATH = join(
   homedir(),
   '.dsh',
@@ -55,7 +59,7 @@ export function apply(ctx, config = {}) {
   }
 
   async function isAuthorized(provider, model) {
-    if (!provider || !model) return true // 无 model 信息不拦
+    // 调用方已做 fail-closed 前置校验（provider/model 非空），此处不再兜底放行。
     const key = `${provider}/${model}`
     const dk = defaultKey()
     if (dk !== null && key === dk) return true
@@ -68,11 +72,22 @@ export function apply(ctx, config = {}) {
     const agent = payload && payload.agent
     const header = agent && agent.session && agent.session.header
     if (!header || header.origin !== 'subagent') return config // 只闸 subagent，主会话 model 由用户自选
-    if (await isAuthorized(config.provider, config.model)) return config
+    const provider = config && config.provider
+    const model = config && config.model
+    // fail-closed（审查层要求）：subagent 模型信息缺失时拒绝，不静默放行。
+    // 缺失意味着模型路由未成功解析；放行会让未授权模型溜进子代理，故按
+    // INCONCLUSIVE 语义硬拒并给出指引。主会话不经过此分支。
+    if (!provider || !model) {
+      throw new Error(
+        `mop-model-auth: subagent ${header.id} 模型信息缺失（provider=${String(provider)}，model=${String(model)}）——` +
+          `fail-closed 拒绝放行（INCONCLUSIVE）。检查模型路由是否解析成功，或显式改用默认模型。`,
+      )
+    }
+    if (await isAuthorized(provider, model)) return config
     throw new Error(
-      `mop-model-auth: subagent ${header.id} 请求未授权模型 ${config.provider}/${config.model}` +
+      `mop-model-auth: subagent ${header.id} 请求未授权模型 ${provider}/${model}` +
         `（默认=${defaultKey() ?? '无'}，不在 allowlist）。` +
-        `授权：mop_model_authorize(provider="${config.provider}", model="${config.model}")；` +
+        `授权：mop_model_authorize(provider="${provider}", model="${model}")；` +
         `或改用默认模型。`,
     )
   })

@@ -60,10 +60,27 @@ export function apply(ctx) {
           )
         }
 
-        const uncachedInputTokens = usage.uncachedInputTokens ?? 0
-        const cacheReadTokens = usage.cacheReadTokens ?? 0
-        const cacheWriteTokens = usage.cacheWriteTokens ?? 0
-        const outputTokens = usage.outputTokens ?? 0
+        // 数值校验：token 桶须为有限非负数值。provider 上报异常（NaN/负/非数值）时
+        // 不采信、不求和，直接报错让门判 INCONCLUSIVE，而非污染 cost 计算。
+        const bucket = (raw, key) => {
+          const n = raw ?? 0
+          if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) {
+            throw new Error(
+              `mop_run_stats: tokenUsage.${key} 非有限非负数值（${String(raw)}）——provider 上报异常`,
+            )
+          }
+          return n
+        }
+        const uncachedInputTokens = bucket(
+          usage.uncachedInputTokens,
+          'uncachedInputTokens',
+        )
+        const cacheReadTokens = bucket(usage.cacheReadTokens, 'cacheReadTokens')
+        const cacheWriteTokens = bucket(
+          usage.cacheWriteTokens,
+          'cacheWriteTokens',
+        )
+        const outputTokens = bucket(usage.outputTokens, 'outputTokens')
 
         return JSON.stringify(
           {

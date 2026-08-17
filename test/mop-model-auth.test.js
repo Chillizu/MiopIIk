@@ -74,13 +74,16 @@ test('闸：主会话（非 subagent）不拦', async () => {
   assert.equal(config.model, 'kimi-for-coding')
 })
 
-test('闸：无 model 信息不拦', async () => {
+test('闸：subagent 无 model 信息 fail-closed', async () => {
   const { listeners } = await withCtx()
-  const config = await listeners['agent/request'](
-    { agent: subagent() },
-    async () => ({ provider: undefined, model: undefined }),
+  await assert.rejects(
+    () =>
+      listeners['agent/request']({ agent: subagent() }, async () => ({
+        provider: undefined,
+        model: undefined,
+      })),
+    /模型信息缺失.*fail-closed/,
   )
-  assert.deepEqual(config, { provider: undefined, model: undefined })
 })
 
 test('mop_model_authorize 追加 allowlist', async () => {

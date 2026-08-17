@@ -24,6 +24,7 @@ export function apply(ctx) {
         name: { type: 'string', required: true },
         description: { type: 'string', required: true },
         content: { type: 'string', required: true },
+        replace: { type: 'boolean' },
       },
       output: stringOutput,
       async execute(args, exec) {
@@ -36,6 +37,7 @@ export function apply(ctx) {
           throw new Error('mop_learn: description required')
         if (!(args.content || '').trim())
           throw new Error('mop_learn: content required')
+        const replace = args.replace === true
         const agent = exec.agent
         const cwd =
           agent &&
@@ -47,8 +49,43 @@ export function apply(ctx) {
         const body = `---\nname: ${name}\ndescription: ${args.description.trim()}\n---\n\n${args.content.trim()}\n`
         const target = await ctx.fs.resolve(join(dir, 'SKILL.md'), { cwd })
         const policy = ctx.sandboxPolicy.resolve({ session: agent.session })
-        await ctx.fs.writeText(target, body, undefined, undefined, policy)
-        return `skill minted: ${name} -> ${dir}/SKILL.md`
+        // 无覆盖保护：skill 是持久化记忆资产，静默覆盖危险。默认 createIfAbsent；
+        // 显式 replace:true 才用 CAS（replaceIfVersion @ 观测版本）覆盖，并发改动报
+        // FS_STALE_VERSION 而非静默吞掉他人产出。
+        const info = await ctx.fs.stat(target)
+        const exists = info !== undefined
+        if (exists && !replace) {
+          throw new Error(
+            `mop_learn: skill "${name}" already exists at ${dir}/SKILL.md — ` +
+              `pass replace:true to overwrite（保护既有产物，避免静默破坏）`,
+          )
+        }
+        try {
+          await ctx.fs.writeText(
+            target,
+            body,
+            exists
+              ? { kind: 'replaceIfVersion', version: info.version }
+              : { kind: 'createIfAbsent' },
+            undefined,
+            policy,
+          )
+        } catch (error) {
+          if (error && error.code === 'FS_NOT_OBSERVED') {
+            throw new Error(
+              `mop_learn: skill "${name}" was created concurrently — re-run to inspect before replacing`,
+            )
+          }
+          if (error && error.code === 'FS_STALE_VERSION') {
+            throw new Error(
+              `mop_learn: skill "${name}" changed since read — re-read then retry replace`,
+            )
+          }
+          throw error
+        }
+        return exists
+          ? `skill replaced: ${name} -> ${dir}/SKILL.md`
+          : `skill minted: ${name} -> ${dir}/SKILL.md`
       },
     }),
   )

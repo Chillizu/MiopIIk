@@ -6,12 +6,13 @@
 # Row set mirrors the harness base bundle's relevant slice
 # (packages/bundle/base/cordis.patch.yml): tools needs the system-prompt
 # service (ToolRuntime inject ['systemPrompt']), subagent-spawn-in-process
-# hard-injects subagents, and mop-executor would hard-inject tools + subagents.
+# hard-injects subagents.
 #
-# NOTE: mop-executor is intentionally NOT in this clean fixture — its Config
-# schema (z.number().int(), packages/mop-executor/index.js:15) throws against
-# the real @deepseek-ai/schemastery, so the real Loader cannot import it. See
-# cordis.with-executor.yml + composition.test.mjs (canary test) and README.md.
+# NOTE: this clean fixture holds only harness services (no mop packages), so the
+# spawn-driver / Loader-default assertions stay independent of mop Config
+# schemas. The Config-schema mop packages (mop-executor / mop-magic-keywords /
+# mop-model-auth) are mounted separately in cordis.with-mop.yml; see
+# composition.test.mjs.
 #
 # The spawn row carries NO config on purpose: assertion ① proves the Loader
 # fills the schema default (providerName: 'spawn') into apply's second arg.

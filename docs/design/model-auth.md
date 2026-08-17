@@ -15,7 +15,7 @@ subagent 的模型必须 ∈ **授权集**（全局默认 ∪ allowlist），否
 ## 规则
 
 1. 非 subagent（主会话）不拦——用户自选模型自担。
-2. `config.provider/model` 缺失不拦。
+2. subagent 的 `config.provider/model` 缺失 → **fail-closed** 拒绝（INCONCLUSIVE），不静默放行（缺失 = 模型路由未成功解析，放行会让未授权模型溜进子代理）。
 3. key `provider/model` ∈ {默认模型, allowlist} → 放行；否则 throw 含授权指引。
 
 ## 数据
@@ -23,6 +23,7 @@ subagent 的模型必须 ∈ **授权集**（全局默认 ∪ allowlist），否
 - allowlist：`~/.dsh/memory/global/model-allowlist.md`，每行 `provider/model`（支持 `#` 注释、`- ` list）。初始预置 `deepseek-official/deepseek-v4-pro`（planner 预设）。
 - 默认模型：`ctx.get('agentDefaultModel').currentSelection()`。
 - 读缓存于内存（首次读 + 授权后刷新），避免每 request 读盘。
+- **可信配置路径**：allowlist 是全局主机级配置（非工作区产物），故 `mop-model-auth` 直接经 `node:fs/promises` 读写、不经 DSH fs/sandboxPolicy seam。这是有意设计，不是 sandbox 绕过；工作区内的写仍受 sandbox 约束。
 
 ## 工具
 

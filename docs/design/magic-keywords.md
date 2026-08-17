@@ -1,8 +1,8 @@
-# 魔法关键词设计（ultrathink / orchestrate / workflowz）
+# 魔法关键词设计（ultrathink / workflowz 触发 + orchestrate 常驻）
 
 > 上一级：[PLAN.md](../../PLAN.md)。对应决策 D15。来源：OMP `src/modes/{magic-keywords,markdown-prose,ultrathink,orchestrate,workflow}.ts` + `prompts/system/*-notice.md` 原文（本地 17.2.15）。
 
-## 1. 三关键词定义（OMP 行为）
+## 1. 关键词定义（OMP 行为；两个 hook 关键词 + orchestrate 常驻）
 
 | 关键词 | 触发行为 | OMP notice 原文要点 |
 |---|---|---|
