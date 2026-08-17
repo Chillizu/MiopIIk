@@ -5,7 +5,7 @@
 ## 0. 前置
 
 - `miopiik` preset 已建且 `standingKeyFor` 挂载验证通过。
-- 用户开一个**新会话**（Web GUI），preset 选 **MiOpIIk 审查层（miopiik）**，cwd 指向目标项目。
+- 用户开一个**新会话**（Web GUI），preset 选 **MiOpIIk（miopiik）**，cwd 指向目标项目。
 - 该会话的 agent 即审查层；本 runbook 由审查层执行。
 
 ## 1. 工具核对（新会话第一步）
