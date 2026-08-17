@@ -88,7 +88,7 @@ export function apply(ctx, config = {}) {
         const truncated = body.length > maxChars
         const shown = truncated ? body.slice(0, maxChars) : body
         const suffix = truncated
-          ? `\n…[output truncated at ${maxOutputChars} chars; full text in the executor subagent session]`
+          ? `\n…[output truncated at ${maxOutputChars} chars; full text in executor subagent session ${run.id}]`
           : ''
         return `[${result.stopReason}] ${shown}${suffix}`
       },
