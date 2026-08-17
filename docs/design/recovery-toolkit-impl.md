@@ -80,7 +80,7 @@
 
 ## 7. P3 与固化结论
 
-- **P3 run-stats（D18）已原生**：trajectory 视图 `AssistantTimingPanel` 展示 Started / Total duration / TTFT / Generation / Throughput（tok/s）+ outputTokens；无需自建。轨迹 tab 本身无可扩展子 Slot（按钮落 chat 视图 header/turnTail 是唯一 additive 点）。
+- **P3 run-stats（D18）已原生 + 可编程 token 出口落地**：trajectory 视图 `AssistantTimingPanel` 展示 Started / Total duration / TTFT / Generation / Throughput（tok/s）+ outputTokens（无需自建）；**可编程侧**新增 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，D18 token 出口），供实验门/审查层逐 run 计量 token。轨迹 tab 本身无可扩展子 Slot（按钮落 chat 视图 header/turnTail 是唯一 additive 点）。
 - **改提示词（defer）**：fork 到「turn 前」需前一个 turn 的 end seq（`owner.turn` 无 prev）；`atSeq = turn.start.seq` 会因"该 turn 未完成"被拒，`start.seq - 1` 有非连续段风险——待实测后再定。
 - **固化路径（待用户 sign-off，因需重启 dsh web）**：
   1. 把恢复插件做成本地 npm 包（host = model 工具 mop_checkpoint/mop_rule_inject/retry_replay + `harness.handle` 四 handler；client = 回溯/重试按钮）；

@@ -39,6 +39,12 @@ const FIXTURE_LINKS = [
     'dsh-subagent-spawn-in-process',
     'packages/subagent/subagent-spawn-in-process',
   ],
+  [
+    '@deepseek-ai',
+    'dsh-session-projection',
+    'packages/session/session-projection',
+  ],
+  ['@deepseek-ai', 'dsh-token-meter', 'packages/llm/token-meter'],
 ]
 
 // [scope, name, target-under-harness] — mop-executor's own imports
@@ -68,8 +74,13 @@ export function ensureLinks() {
       join(HARNESS_ROOT, rel),
     )
   }
-  // The three Config-schema mop packages the composition tests mount.
-  for (const name of ['mop-executor', 'mop-magic-keywords', 'mop-model-auth']) {
+  // The Config-schema mop packages the composition tests mount.
+  for (const name of [
+    'mop-executor',
+    'mop-magic-keywords',
+    'mop-model-auth',
+    'mop-run-stats',
+  ]) {
     linkIfMissing(
       join(here, 'node_modules', '@chillizu', name),
       join(MOP_ROOT, 'packages', name),

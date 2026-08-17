@@ -23,13 +23,13 @@
 | D10 | 监督层可知性三通道：定期报告推送 + session_query 读日志 + `.dsh/progress/current.md` 落盘事实 | [通信协议](docs/design/communication-protocol.md) |
 | D11 | Subagent 授权闸：派发默认经用户确认，可放行，可场景级禁停（评测场景禁 subagent） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D12 | 记忆三级：全局记忆（用户偏好/系统信息/系统级改动）、项目记忆（进展/思路/长期需求）、recall（= DSH session_search 家族）；一期零新工具 | [memory-design](docs/design/memory-design.md) |
-| D13 | 恢复工具包：`checkpoint` / `rewind`（fork 无损回溯，含冷会话）/ 规则注入；`/retry` **弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
+| D13 | 恢复工具包：`checkpoint` / `rewind`（fork 无损回溯，含冷会话）/ 规则注入；`/retry` **弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生 + `mop_run_stats` 可编程 token 出口（见 D18） | [recovery-toolkit](docs/design/recovery-toolkit.md) |
 | D14 | 恢复工具与会话管理（fork/rewind）UI 落位：Web GUI「轨迹」页面——**按钮方向已弃**（`sessions.fork`=新会话，做不出就地回退）；checkpoint/rewind 收为 agent 工具 | 同上 |
 | D15 | 魔法关键词：hook 检测 **ultrathink / workflowz**（正文散文）注入 notice；**orchestrate** 为规划层 persona 常驻契约段落（非 hook 触发） | [magic-keywords](docs/design/magic-keywords.md) |
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
-| D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口 | [recovery-toolkit](docs/design/recovery-toolkit.md) |
-| D19 | 模型路由（**已确认判别侧 / 成本待复测**，D29→D29v2）：审查/规划强模型、执行/监督廉价模型——D29 弱版 24 run 全门 PASS（H1 flash rewind 0%、H2 0 漏报、H3 0.60×）但弱判别；**D29v2 强版判别力已确认**：加难任务集 + 参考材料埋陷阱 + golden 收紧后，flash 执行层 20 任务真 rewind 0%（与 pro 持平，H1 PASS，执行层判别力不劣于 pro）；但注入缺陷仍零传播 → 监督侧 H2 判 NULL（契约 §3），H3 墙钟代理失真未证实。结论：**执行/监督用廉价模型（flash）成立（判别力充分）；成本侧待墙钟精确复测**。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
+| D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口；**token 出口已落地** `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，逐 turn/step 折叠、replace 不重复计）；墙钟 / 工具计数仍走原生 trajectory | [recovery-toolkit](docs/design/recovery-toolkit.md) |
+| D19 | 模型路由（**已确认判别侧 / 成本待复测**，D29→D29v2）：审查/规划强模型、执行/监督廉价模型——D29 弱版 24 run 全门 PASS（H1 flash rewind 0%、H2 0 漏报、H3 0.60×）但弱判别；**D29v2 强版判别力已确认**：加难任务集 + 参考材料埋陷阱 + golden 收紧后，flash 执行层 20 任务真 rewind 0%（与 pro 持平，H1 PASS，执行层判别力不劣于 pro）；但注入缺陷仍零传播 → 监督侧 H2 判 NULL（契约 §3），H3 墙钟代理失真未证实。结论：**执行/监督用廉价模型（flash）成立（判别力充分）；成本侧已拆 H3-latency（墙钟）/H3-cost（token×价）且 token 出口 `mop_run_stats` 已落地，待 D29v3 用 token 复测**。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D20 | 后台任务对齐 DSH jobs（job_list/output/kill + run_in_background）；长任务强制详细日志 + 结束 flag + ETA | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D21 | 计划树工作流：大项目先建树（第一层计划 / 第二层文档参考+对话记录简述 / 第三层设计细则），本树即约定实例 | [plan-tree-workflow](docs/design/plan-tree-workflow.md) |
 | D22 | 简洁原则：后期插件实现时，提示词（特别是提示词）与代码必须保持简洁——只给事实与验收，不给方法说教 | 全树适用 + [lsp-extension](docs/design/lsp-extension.md) §6 |
@@ -39,7 +39,7 @@
 | D26 | 命名约定：MiOpIIk 自建包用 `@chillizu/mop-<domain>-<feature>`（mop = MiOpIIk 域，对应 DSH 的 dsh-）；插件 name = `mop-<domain>-<feature>`；模型工具名 = `mop_<verb>`（下划线）；组合行 id 与插件 name 一致 | 全树适用 |
 | D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
-| D29 | D19 模型路由实验（类型：实验；状态：已跑；证据：D29 弱版本 24 run + D29v2 强版本 40 执行层/20 监督层 run + 双报告）——对比强/弱执行层模型 rewind 率 + 弱监督层漏报率。D29（弱判别）：24 run 全门 PASS 但 0 rewind + 注入缺陷零传播（弱判别，初步确认）。**D29v2（强版本判别力，判别已确认）**：任务集加难 + 陷阱埋进参考材料 + golden 收紧，flash/pro 执行层 20 任务**真 rewind 均 0%**（20/20 规避参考材料语义陷阱，H1 PASS）；但**传播缺陷仍为 0 → H2 判 NULL**（监督判别无从验证，契约 §3 明示 P=0 时 NULL）；H3 墙钟代理失真未证实。raw golden 9 个 FAIL 全为 golden 装置缺陷（env 注入/readdir mock/任务依赖/返回消息断言位置），非模型能力。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
+| D29 | D19 模型路由实验（类型：实验；状态：已跑；证据：D29 弱版本 24 run + D29v2 强版本 40 执行层/20 监督层 run + 双报告）——对比强/弱执行层模型 rewind 率 + 弱监督层漏报率。D29（弱判别）：24 run 全门 PASS 但 0 rewind + 注入缺陷零传播（弱判别，初步确认）。**D29v2（强版本判别力，判别已确认）**：任务集加难 + 陷阱埋进参考材料 + golden 收紧，flash/pro 执行层 20 任务**真 rewind 均 0%**（20/20 规避参考材料语义陷阱，H1 PASS）；但**传播缺陷仍为 0 → H2 判 NULL**（监督判别无从验证，契约 §3 明示 P=0 时 NULL）；H3 墙钟代理失真未证实（已拆 H3-latency/H3-cost + `mop_run_stats` token 出口，待 D29v3 复测）。raw golden 9 个 FAIL 全为 golden 装置缺陷（env 注入/readdir mock/任务依赖/返回消息断言位置），非模型能力。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 | D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
 | D31 | 监督层漏报水位（类型：实测发现；状态：已实测；证据：D29 §3.2 + D29v2）——D29 弱版监督层对细微（涌现）缺陷漏报 33%（2/6，flash/pro 持平，> D16 预注册 20% 红线）。决策：**接受为已知限制**（N=6 方向性证据）。**D29v2 复核**：执行层传播缺陷为 0（无坏活可查）→ 监督漏报率无分母，**无法复测/复用该 33% 结论**；「双模型交叉监督」缓解候选在 D29v2 因无传播样本获证，等待含传播缺陷的实验轮验证 | [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) §3 |
 | D32 | 轻量模式 = 三档 preset（类型：设计；状态：已定；证据：外部讨论 + 社区查证）——纠正「极简模式最好」（官方极简=基准测试用，非生产推荐）；审查层「只用 bash」**否决**（bash 是无差别管道：藏能力 + 丢 sandboxPolicy 细粒度，且砍掉体系在用的 read/grep/edit/session_search）；工具面已按职责收窄（执行 7/监督 6），真瘦身空间在 prompt+上下文。三档：miopiik-lite（单会话无 subagent 行）/ miopiik（现状）/ miopiik-full（四层+监督+授权闸全开），三档共享 persona + mop 插件；lite 无 subagent 行 = U3 场景级禁停机制化；升档路径写入审查层 persona。红线：不动 compaction（D24）、不动 session_query/记忆（D12/D10） | [lightweight-mode](docs/design/lightweight-mode.md) |
@@ -88,7 +88,7 @@
 
 已完成：
 1. **阶段一 preset+协议**：四 prompt 定稿、miopiik 组合、四层端到端跑通（A1–A4/A6 PASS，A5 中间档）✓
-2. **阶段二恢复工具包**（D13/D14）：checkpoint / rewind（fork 无损，含冷会话）/ 规则注入 / 自动重试（原生）/ run-stats（原生）——已固化为 `@chillizu/mop-tool-recovery` 入 miopiik ✓
+2. **阶段二恢复工具包**（D13/D14）：checkpoint / rewind（fork 无损，含冷会话）/ 规则注入 / 自动重试（原生）/ run-stats（原生 trajectory + `mop_run_stats` 可编程 token 出口）——已固化为 `@chillizu/mop-tool-recovery` 入 miopiik ✓
 3. **记忆细化**（D12）：全局记忆 `~/.dsh/memory/global/` + persona 注入 + recall 全文搜索启用（profile patch，重启生效）✓
 4. **魔法关键词 hook**（D15）：`@chillizu/mop-magic-keywords` 入 miopiik，正文检测 ultrathink/workflowz → notice 注入 ✓
 5. **命名约定**（D26）：`@chillizu/mop-<domain>-<feature>` / `mop_<verb>` ✓
@@ -103,9 +103,10 @@
 14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
 15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（mop-executor/magic-keywords/model-auth 三包）；bundle + 真实组合测试已落地 ✓
 16. **生态形态层补全**（DSH 生态契合 60% → 形态层收口）：6 包声明 dsh.bundle patch + cordis.patch.yml（47bc72a）；README 改 bundle 姿势 + 补 model-auth/learn 两包（8bb1cba）；另 3 包路径提命名常量（6cd20f1）；三档 preset 落地 miopiik-lite（d2c24c2）；**真实组合测试**（56265e8）落地并抓出真 bug——mop-executor `z.number().int()` 真实 schemastery 不存在（mock stub no-op 掩盖），改 `z.natural()`；3 真实组合 + 30 mock 全绿 ✓
+17. **D18 token 出口 + H3 门重冻结**（外部评审 P1-4）：新包 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，live-first + coldSnapshot 兜底，not-found/投影不可用/全零桶三态）；H3 拆 H3-latency/H3-cost + DeepSeek V4 峰谷定价表 + 灰区/INCONCLUSIVE 口径写入 [model-routing-experiment](docs/design/model-routing-experiment.md) §3–§4；真实组合测试锚「tokenUsage 投影零桶」；44 mock + 4 组合全绿 ✓
 
 待办（用户门控，需重启/实测）：
-- **D29v2 强版本实验续跑**（类型：已跑；结论：H1 判别力确认 PASS / H2 NULL（传播=0）/ H3 墙钟代理失真未证实；raw golden 9 FAIL 全为 golden 装置缺陷待修）：执行层 40 run（flash+pro 真 rewind 均 0、20/20 规避参考材料陷阱）+ flash 监督层 20 run 完成（全部 PASS）。**遗留**：① 传播缺陷仍 0 → H2 无从判别，需重设缺陷注入口径（不提供明确 Acceptance 或把陷阱埋进正常实现细节）；② golden 装置需修（env 注入 MOP_MODEL_ALLOWLIST、readdir/listDir mock、任务依赖 t11↔t09、返回消息断言位置）；③ H3 需逐 run 精确墙钟。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md)
+- **D29v2 强版本实验续跑**（类型：已跑；结论：H1 判别力确认 PASS / H2 NULL（传播=0）/ H3 墙钟代理失真未证实；raw golden 9 FAIL 全为 golden 装置缺陷待修）：执行层 40 run（flash+pro 真 rewind 均 0、20/20 规避参考材料陷阱）+ flash 监督层 20 run 完成（全部 PASS）。**遗留**：① 传播缺陷仍 0 → H2 无从判别，需重设缺陷注入口径（不提供明确 Acceptance 或把陷阱埋进正常实现细节）；② golden 装置需修（env 注入 MOP_MODEL_ALLOWLIST、readdir/listDir mock、任务依赖 t11↔t09、返回消息断言位置）；③ H3 需逐 run 精确墙钟（现已拆 H3-latency/H3-cost，token 走 `mop_run_stats`，见 D18/模型路由实验 §4）。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md)
 - **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token。**需 miopiik 会话 + 先冻结任务集/golden**；且 D32 已实测「隐藏 schema 不计入」削弱其省 token 动机，是否值得跑留待你定
 
 ## 6. 维护规则

@@ -12,7 +12,7 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 |---|---|---|---|
 | H1 执行层 rewind | flash ≤15%（≤3/20） | **flash 真 rewind 0%（0/20）**；raw golden 14 PASS/6 FAIL（全部装置缺陷，非模型能力） | **PASS** |
 | H2 监督漏报 | 两模型均 ≤20% | 传播缺陷 P=0 → 漏报分子 0/分母 0 | **NULL**（契约 §3 明确 P=0 则该门 NULL，如实标注） |
-| H3 flash 成本 | flash ≤0.77×pro | 墙钟代理失真，flash≈pro 量级，无法严格判定 | **未证实**（代理不足） |
+| H3 flash 成本 | flash ≤0.77×pro | 墙钟代理失真，flash≈pro 量级，无法严格判定 | **未证实**（代理不足；已拆 H3-latency/H3-cost + `mop_run_stats` 出口，见 §5.4，新门只对后续 run 生效） |
 
 ## 1. 实验设置回顾（冻结于契约，此处仅摘要）
 
@@ -76,8 +76,9 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 - 传播缺陷 P=0 → 漏报率无分母 → **H2 NULL**（如实标注，不伪造判别力）。
 
 ### H3 flash 成本 ≤0.77×pro
-- 墙钟以批次均摊近似记录（flash exec avg ~84s/run、pro exec avg ~74s/run），总墙钟 flash≈pro（1680s vs 1480s），**不满足 ≤0.77** —— 但此代理严重失真（wall 非逐 run 精确 date 差值、flash 还承担装置判定与监督层重试）。
-- **H3 判定：未证实（墙钟代理不足）**。建议后续以精确逐 run 墙钟复测，或接受"两模型量级相当"的定性结论。
+- 墙钟以批次均摊近似记录（flash exec avg ~84s/run、pro exec avg ~74s/run），总墙钟 flash≈pro（1680s vs 1480s，比值 ≈0.88×），**不满足 ≤0.77** —— 但此代理严重失真（wall 非逐 run 精确 date 差值、flash 还承担装置判定与监督层重试）。
+- **H3 判定：未证实（墙钟代理不足）**。注意：此 0.88× 墙钟比值即使按新 H3-latency 门也不满足 ≤0.77，**不得误标 PASS**。
+- 后续修复（见 §5.4）：H3 拆 H3-latency/H3-cost + `mop_run_stats` token 出口，新门只对后续 run 生效，本报告不追溯重判。
 
 ## 5. 关键发现与限制
 
@@ -93,8 +94,9 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 - 6 个任务 / 9 个 failed run 的 golden 判别存在口径/注入缺陷（env 注入、readdir/listDir mock、任务间依赖、返回消息断言位置）。
 - 这些应在下一轮实验前修复：golden 应与 slice Change/Acceptance 严格对齐，mock 形态与 harness 真实 API（fsio `listDir`、`MOP_MODEL_ALLOWLIST`）一致。
 
-### 5.4 成本代理失真
+### 5.4 成本代理失真（已修复）
 - H3 无精确墙钟；flash/pro 产出质量相同（0 rewind）前提下，成本的边际价值有限。
+- **修复落地（外部评审 P1-4）**：墙钟≠成本。H3 已拆为 H3-latency（墙钟延迟）+ H3-cost（token×价）；新增 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶）作为 D18 可编程 token 出口；定价表 + 灰区/INCONCLUSIVE 口径见 [model-routing-experiment](../../design/model-routing-experiment.md) §4。**新门只对后续 run 生效，D29v2 旧数据不追溯重判**（当时无 token seam 正是 D18 缺口，H3-cost 无法追溯评估）。
 
 ## 6. 结论回写
 
@@ -105,7 +107,7 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 
 - 传播=0 使 H2 无法验证；需重新设计缺陷注入口径（如不提供明确 Acceptance、或把陷阱藏在正常实现细节中而非参考材料）。
 - golden 装置需系统修复（env/mock/断言位置对齐）。
-- H3 需精确墙钟代理（token 无编程 seam，仍以 date 差值，但需逐 run 记录）。
+- H3 已拆 H3-latency/H3-cost；token 出口 `mop_run_stats`（D18）落地，逐 run 记录 sessionId/起止时间/四桶（见 [model-routing-runbook](../../design/model-routing-runbook.md) §3）。
 
 ## 附：文件清单
 

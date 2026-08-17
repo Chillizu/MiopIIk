@@ -44,26 +44,27 @@
 
 - rewind 率：执行层首轮产出未过 Acceptance（审查层判定）→ 记 1 次 rewind；rewind 率 = rewind 次数 / 总切片数。
 - 漏报率：注入缺陷 N 个，监督层未报出数 ≤ 0.2N（ground truth 见 `.dsh/contracts/d29/defects.md`，仅审查层可见）。
-- token：审查层从 session telemetry（run-stats，原生 trajectory）补录；执行层与脚本不采集。
-- 墙钟：审查层逐 run 记录（`date +%s`）。
+- token：审查层用 `mop_run_stats(sessionId)` 读累计四桶（D18 可编程出口，`@chillizu/mop-run-stats`）；sessionId 来自 `mop_spawn_executor` 返回后缀的 `run.id`，**每 run 当场落盘到记录表**（不追溯补）。
+- 墙钟（延迟）：审查层逐 run 记录起止时间（`date +%s`），用于 H3-latency；起止时间同时用于 tier 判定（峰谷，见母文档 §4）。
 - 隔离：run 间由审查层基线清理（删除上一 run 产出、恢复基线）；s4/s5 只读切片产出独立报告文件，天然隔离。
 
 ## 4. 判定流程
 
-量化门（与 [model-routing-experiment.md](model-routing-experiment.md) §3 逐字一致）：
+量化门（与 [model-routing-experiment.md](model-routing-experiment.md) §3 逐字一致；成本口径/定价表见 §4）：
 
 | 门 | PASS | KILL |
 |---|---|---|
-| 执行层 rewind 率 | flash ≤ 15% | flash > 15% 且明显劣于 pro |
-| 监督漏报率 | 两模型均 ≤ 20% | 任一 > 20% |
-| 成本 | flash 成本 ≤ 0.77 × pro 成本 | flash 成本 ≥ pro 成本 |
+| H1 执行层 rewind 率 | flash ≤ 15% | flash > 15% 且明显劣于 pro |
+| H2 监督漏报率 | 两模型均 ≤ 20% | 任一 > 20% |
+| H3-latency 延迟 | flash 墙钟 ≤ 0.77 × pro 墙钟 | flash 墙钟 > 0.77 × pro |
+| H3-cost 成本 | flash 成本 ≤ 0.77 × pro 成本 | flash 成本 > 0.77 × pro |
 
-成本门补充（母文档 §1 H3）：总成本（token + 墙钟）flash 至少低于 pro 30%，倍率 ≥ 1.3×。
+灰区（0.77 < 比值 < 1.0）= 未证实/需复测；某 run 四桶全零 = 该 run H3-cost INCONCLUSIVE。
 
 步骤：
 1. 前置检查：确认基线（6 切片产出均不存在），从恢复点开始（当前 = s1 exec-flash 首跑）。
 2. 顺序执行：审查层按 s1 → s6 顺序，每切片按 exec-flash×sup-flash → exec-flash×sup-pro → exec-pro×sup-flash → exec-pro×sup-pro 跑 4 个 run。
-3. 每 run 记录：run id / rewind（Y/N）/ 漏报缺陷 / token / 墙钟。
+3. 每 run 记录：run id / sessionId / 起止时间 / rewind（Y/N）/ 漏报缺陷 / token 四桶（`mop_run_stats`）/ 墙钟。
 4. run 间清理：删除上一 run 产出文件，恢复基线；s4/s5 产出独立报告文件，天然隔离。
 5. 汇总判定：24 run 完成后，按上表逐门判定 PASS / KILL。
 6. 回写：判定结果回写 PLAN.md 中 D19 状态（待验证 → 已确认 / 推翻）。
@@ -72,16 +73,17 @@
 
 逐 run 记录表（24 行，每 run 一行）：
 
-| run id | 切片 | 执行层 | 监督层 | rewind | 漏报缺陷 | token | 墙钟(s) |
-|---|---|---|---|---|---|---|---|
-| s1-exec-flash-sup-flash | s1 | flash | flash |  |  |  |  |
+| run id | 切片 | 执行层 | 监督层 | sessionId | 起止时间 | rewind | 漏报缺陷 | token 四桶 | 墙钟(s) |
+|---|---|---|---|---|---|---|---|---|---|
+| s1-exec-flash-sup-flash | s1 | flash | flash |  |  |  |  |  |  |
 
 汇总判定表：
 
 | 门 | PASS 判据 | 实测 | 判定 |
 |---|---|---|---|
-| 执行层 rewind 率 | flash ≤ 15% |  |  |
-| 监督漏报率 | 两模型均 ≤ 20%（漏报 ≤ 0.2N） |  |  |
-| 成本 | flash 成本 ≤ 0.77 × pro 成本 |  |  |
+| H1 执行层 rewind 率 | flash ≤ 15% |  |  |
+| H2 监督漏报率 | 两模型均 ≤ 20%（漏报 ≤ 0.2N） |  |  |
+| H3-latency 延迟 | flash 墙钟 ≤ 0.77 × pro 墙钟 |  |  |
+| H3-cost 成本 | flash 成本 ≤ 0.77 × pro 成本 |  |  |
 
 D19 回写行：`待验证 → 已确认 / 推翻`（附每门实测依据）。

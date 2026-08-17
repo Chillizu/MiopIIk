@@ -1,0 +1,3 @@
+- insert:
+    - id: mop-run-stats
+      name: '@chillizu/mop-run-stats'

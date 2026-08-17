@@ -12,7 +12,7 @@
 | S4 | 恢复工具包 | ✓ | checkpoint/rewind/rule 固化入 miopiik；`/retry` 弃用（自动重试=原生 provider）；run-stats=原生 trajectory |
 | S5 | 分级记忆 | ✓ 一期 | 全局→`~/.dsh/memory/global/` + persona 注入；项目→`.dsh/memory/`；recall 缺口见下 |
 | S6 | 执行/报告模板 | ✓ | 三段式 + [EXEC] + P0–P3 |
-| S7 | run-stats | ✓ 原生 | trajectory `AssistantTimingPanel`（duration/TTFT/Throughput/tokens） |
+| S7 | run-stats | ✓ 原生 + 可编程 | trajectory `AssistantTimingPanel`（duration/TTFT/Throughput/tokens）+ `mop_run_stats(sessionId)` 累计桶（D18 token 出口） |
 | S8 | session_query 授权 spike | ✓ | U2 实测：部署级禁用（SESSION_QUERY_SEARCH_DISABLED） |
 | S9 | 动态 LSP | ✗ 可选 | 后置，无需求 |
 

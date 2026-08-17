@@ -10,6 +10,7 @@ import { ensureLinks, HARNESS_ROOT } from './link-harness.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const CONFIG = join(here, 'cordis.yml')
 const CONFIG_WITH_MOP = join(here, 'cordis.with-mop.yml')
+const CONFIG_WITH_RUN_STATS = join(here, 'cordis.with-run-stats.yml')
 
 /** The real boot entry: packages/boot/app-boot/src/index.ts:757 (built lib). */
 let boot
@@ -102,5 +103,34 @@ test('real Loader coerces all three mop Config schemas into apply(config)', asyn
     assert.equal(auth.fiber.config.allowlistPath, undefined)
   } finally {
     await ctx2.fiber.dispose()
+  }
+})
+
+test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
+  // 契约锚：mop-run-stats 依赖「tokenMeter 挂载后 tokenUsage 投影恒存在（零桶），
+  // undefined 只 = tokenMeter 未挂载」。此处用真实 token-meter + session-projection
+  // 证明 Config z.object({}) 过真实 Loader、mop-run-stats 硬 inject tools、
+  // 且空 session 的 snapshot 里 tokenUsage 键确实注册为零桶（非 undefined）。
+  const ctx3 = await boot('mop-composition', CONFIG_WITH_RUN_STATS)
+  try {
+    const entries = [...ctx3.loader.entries()]
+    const rs = entries.find((entry) => entry.options.id === 'mop-run-stats')
+    assert.ok(rs, 'mop-run-stats entry must be mounted and active')
+    assert.deepEqual(
+      rs.fiber.config,
+      {},
+      'Config z.object({}) 经 Loader 得空对象',
+    )
+
+    const session = ctx3.sessions.create('run-stats-empty')
+    const snap = ctx3.sessionProjections.snapshot(session)
+    assert.deepEqual(snap.values.tokenUsage, {
+      uncachedInputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    })
+  } finally {
+    await ctx3.fiber.dispose()
   }
 })
