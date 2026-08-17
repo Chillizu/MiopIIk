@@ -96,7 +96,7 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 
 ### 5.4 成本代理失真（已修复）
 - H3 无精确墙钟；flash/pro 产出质量相同（0 rewind）前提下，成本的边际价值有限。
-- **修复落地（外部评审 P1-4）**：墙钟≠成本。H3 已拆为 H3-latency（墙钟延迟）+ H3-cost（token×价）；新增 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶）作为 D18 可编程 token 出口；定价表 + 灰区/INCONCLUSIVE 口径见 [model-routing-experiment](../../design/model-routing-experiment.md) §4。**新门只对后续 run 生效，D29v2 旧数据不追溯重判**（当时无 token seam 正是 D18 缺口，H3-cost 无法追溯评估）。
+- **修复落地（外部评审 P1-4）**：墙钟≠成本。H3 已拆为 H3-latency（墙钟延迟）+ H3-cost（token×价）；新增 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶）作为 D18 可编程 token 出口；定价表 + 灰区/INCONCLUSIVE 口径见 [model-routing-experiment](../design/model-routing-experiment.md) §4。**新门只对后续 run 生效，D29v2 旧数据不追溯重判**（当时无 token seam 正是 D18 缺口，H3-cost 无法追溯评估）。
 
 ## 6. 结论回写
 
@@ -107,7 +107,7 @@ D29v2 用「缺陷注入进参考材料 + 收紧 golden 判别」（加 A6 四�
 
 - 传播=0 使 H2 无法验证；需重新设计缺陷注入口径（如不提供明确 Acceptance、或把陷阱藏在正常实现细节中而非参考材料）。
 - golden 装置需系统修复（env/mock/断言位置对齐）。
-- H3 已拆 H3-latency/H3-cost；token 出口 `mop_run_stats`（D18）落地，逐 run 记录 sessionId/起止时间/四桶（见 [model-routing-runbook](../../design/model-routing-runbook.md) §3）。
+- H3 已拆 H3-latency/H3-cost；token 出口 `mop_run_stats`（D18）落地，逐 run 记录 sessionId/起止时间/四桶（见 [model-routing-runbook](../design/model-routing-runbook.md) §3）。
 
 ## 附：文件清单
 

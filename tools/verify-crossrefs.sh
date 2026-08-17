@@ -12,7 +12,7 @@ set -u
 repo_root=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root" || exit 2
 
-plan=${1:-PLAN.md}
+plan=${1:-docs/PLAN.md}
 docs=${2:-docs}
 
 usage() {

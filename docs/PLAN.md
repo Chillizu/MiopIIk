@@ -7,7 +7,7 @@
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
 
-## 2. 已确认决策（D1–D33）
+## 2. 已确认决策（D1–D34）
 
 | # | 决策 | 详情文档 |
 |---|---|---|
@@ -44,6 +44,7 @@
 | D31 | 监督层漏报水位（类型：实测发现；状态：已实测；证据：D29 §3.2 + D29v2）——D29 弱版监督层对细微（涌现）缺陷漏报 33%（2/6，flash/pro 持平，> D16 预注册 20% 红线）。决策：**接受为已知限制**（N=6 方向性证据）。**D29v2 复核**：执行层传播缺陷为 0（无坏活可查）→ 监督漏报率无分母，**无法复测/复用该 33% 结论**；「双模型交叉监督」缓解候选在 D29v2 因无传播样本获证，等待含传播缺陷的实验轮验证 | [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) §3 |
 | D32 | 轻量模式 = 三档 preset（类型：设计；状态：已定；证据：外部讨论 + 社区查证）——纠正「极简模式最好」（官方极简=基准测试用，非生产推荐）；审查层「只用 bash」**否决**（bash 是无差别管道：藏能力 + 丢 sandboxPolicy 细粒度，且砍掉体系在用的 read/grep/edit/session_search）；工具面已按职责收窄（执行 7/监督 6），真瘦身空间在 prompt+上下文。三档：miopiik-lite（单会话无 subagent 行）/ miopiik（现状）/ miopiik-full（四层+监督+授权闸全开），三档共享 persona + mop 插件；lite 无 subagent 行 = U3 场景级禁停机制化；升档路径写入审查层 persona。红线：不动 compaction（D24）、不动 session_query/记忆（D12/D10） | [lightweight-mode](docs/design/lightweight-mode.md) |
 | D33 | 上游裁判输入通道（类型：过程原则；状态：已定；证据：上游模型实战 + D17）——审查层=体系内 CTO（当事人、有执行权、判错担责）；上游模型裁判=外聘审计（局外人、零利益相关、每轮重置、只有说服力）；其「清醒」=结构性清白（无沉没成本）。教训：给上游裁判的永远是一手产物 + 复算路径（仓库/源码/原始报告），不是中间层结论；2.5 汇报模板「证据等级：URL/日志/复算脚本」栏是最不能省的 | [report-template](docs/design/templates/report-template.md) §4 |
+| D34 | 监督层红队 benchmark（类型：实验提案；状态：设计已定，待跑，D29v3 fallback 阶梯末级）——对监督层直接喂对抗生成坏活，测能力级判别力，解耦执行层 base rate；与系统级 H2（D29v3）分开，单独预注册 | [d29v3-experiment-design](docs/design/d29v3-experiment-design.md) §2 |
 
 ## 3. 计划树索引
 
@@ -114,6 +115,6 @@
 
 - 本文件是单源事实；任何设计变更先改本文件对应决策行，再改详情文档；
 - 双树方向：git-tracked 文档（PLAN.md、docs/design、docs/review）以 **repo 为权威**（git 有历史、push 落点），workspace 为镜像 + 本地独有文件（docs/research、docs/profile、.dsh）；改 repo 后立即 cp→workspace，改 packages 后立即 cp→live profiles（`~/.dsh/profiles/mop-*`）；
-- 改决策行时，必须同步该决策承载文档的代码块（如 D25 改动需同步 architecture-3-layer §8 yaml），并在 philosophy-audit §2 登记漂移修复；
+- 改决策行时，必须同步该决策承载文档的代码块（如 D25 改动需同步 architecture-3-layer §8 yaml），并在 philosophy-audit §2 登记漂移修复；**机制化**：executor persona 的「定稿源 ↔ 运行时副本」逐字同步由 `test/persona-sync.test.js` 钉死，改一处另一处不同步则测试失败；
 - 会话发现的新偏好/教训 → 更新 [user-preference-profile](docs/profile/user-preference-profile.md)，重要结论升级为 PLAN.md 决策；
 - 所有文档遵循用户风格：直接、简洁、无 Emoji、证据优先。
