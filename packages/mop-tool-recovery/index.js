@@ -4,7 +4,6 @@ export const name = 'mop-tool-recovery'
 export const inject = [
   'tools',
   'fs',
-  'systemPrompt',
   'sandboxPolicy',
   'sessions',
   'sessionPersistence',
@@ -105,14 +104,7 @@ async function appendCheckpoint(fs, target, line, policy) {
 }
 
 export function apply(ctx) {
-  const {
-    tools,
-    fs,
-    systemPrompt,
-    sandboxPolicy,
-    sessions,
-    sessionPersistence,
-  } = ctx
+  const { tools, fs, sandboxPolicy, sessions, sessionPersistence } = ctx
   // sessionId -> { disposer, text }；规则状态按会话隔离，避免多会话互相覆盖。
   const ruleState = new Map()
 
@@ -179,8 +171,10 @@ export function apply(ctx) {
         const cp = await readExisting(fs, target)
         let seq = null
         let cpSession = null
-        for (const line of cp.split('\n')) {
-          const entry = parseCheckpointLine(line)
+        // 倒序遍历取最新一条（checkpoint 文件只追加，同名 label 后写的才是最新边界）。
+        const lines = cp.split('\n')
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const entry = parseCheckpointLine(lines[i])
           if (entry !== null && entry.label === args.label) {
             seq = entry.seq
             cpSession = entry.session
@@ -259,7 +253,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_rule_inject',
       description:
-        'Inject a session-scoped rule that overrides default behavior for the current session. Use to freeze a lesson or constraint so later turns obey it.',
+        'Inject a session-scoped rule that overrides default behavior for the current session. Use to freeze a lesson or constraint so later turns obey it. Memory-only (lost on process restart); revoke with mop_rule_clear.',
       parameters: { text: { type: 'string', required: true } },
       output: stringOutput,
       execute(args, exec) {
@@ -269,7 +263,11 @@ export function apply(ctx) {
         // 注册到调用 agent 的作用域（session-scoped），而非插件的 standing scope。
         const sessionPrompt =
           agent.ctx && agent.ctx.get ? agent.ctx.get('systemPrompt') : undefined
-        const prompt = sessionPrompt || systemPrompt
+        if (sessionPrompt === undefined)
+          throw new Error(
+            'mop_rule_inject: session-scoped systemPrompt unavailable — refusing to fall back to a process-global rule',
+          )
+        const prompt = sessionPrompt
         const prev = ruleState.get(sid)
         if (prev && prev.disposer) prev.disposer()
         const disposer = prompt.section({
@@ -296,6 +294,24 @@ export function apply(ctx) {
         return state === undefined || state.text === ''
           ? '(no rule injected)'
           : state.text
+      },
+    }),
+  )
+
+  tools.register(
+    defineTool({
+      name: 'mop_rule_clear',
+      description:
+        'Clear the session-scoped rules injected by mop_rule_inject for the current session. Memory-only: injected rules are not persisted and are also lost on process restart.',
+      parameters: {},
+      output: stringOutput,
+      execute(_args, exec) {
+        const agent = exec.agent
+        const sid = agent && agent.session ? agent.session.id : null
+        const state = sid !== null ? ruleState.get(sid) : undefined
+        if (state !== undefined && state.disposer) state.disposer()
+        ruleState.delete(sid)
+        return state === undefined ? '(no rule injected)' : 'rules cleared'
       },
     }),
   )

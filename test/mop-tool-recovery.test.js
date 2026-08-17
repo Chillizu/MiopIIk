@@ -50,13 +50,14 @@ function agent(id) {
   }
 }
 
-test('apply registers the five recovery tools', () => {
+test('apply registers the six recovery tools', () => {
   const { ctx, registered } = makeCtx()
   apply(ctx)
   assert.deepEqual(registered.map((t) => t.name).sort(), [
     'mop_checkpoint',
     'mop_checkpoint_list',
     'mop_rewind',
+    'mop_rule_clear',
     'mop_rule_inject',
     'mop_rule_show',
   ])
@@ -72,6 +73,32 @@ test('rule state is session-scoped', () => {
   assert.equal(
     show.execute({}, { agent: agent('session-b') }),
     '(no rule injected)',
+  )
+})
+
+test('mop_rule_clear revokes the injected rule', () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  const inject = registered.find((t) => t.name === 'mop_rule_inject')
+  const clear = registered.find((t) => t.name === 'mop_rule_clear')
+  const show = registered.find((t) => t.name === 'mop_rule_show')
+  inject.execute({ text: 'rule for A' }, { agent: agent('session-a') })
+  assert.equal(show.execute({}, { agent: agent('session-a') }), 'rule for A')
+  clear.execute({}, { agent: agent('session-a') })
+  assert.equal(
+    show.execute({}, { agent: agent('session-a') }),
+    '(no rule injected)',
+  )
+})
+
+test('mop_rule_inject throws when session systemPrompt is unavailable', () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  const inject = registered.find((t) => t.name === 'mop_rule_inject')
+  // agent 无 ctx.get('systemPrompt') → 抛错，不退回 standing scope（P0-2）
+  assert.throws(
+    () => inject.execute({ text: 'x' }, { agent: { session: { id: 's' } } }),
+    /session-scoped systemPrompt unavailable/,
   )
 })
 
@@ -173,6 +200,35 @@ test('hot rewind uses sessions.fork', async () => {
   )
   assert.match(result, /hot/)
   assert.deepEqual(forked, [{ sid: 'sess-hot', seq: 3 }])
+})
+
+test('rewind takes the latest checkpoint for a duplicate label', async () => {
+  const forked = []
+  const { ctx, registered } = makeCtx({
+    fs: {
+      resolve: async () => ({}),
+      stat: async () => ({}),
+      readText: async () =>
+        '- [2026-01-01T00:00:00.000Z] milestone | session=sess-hot | seq=3\n' +
+        '- [2026-01-02T00:00:00.000Z] milestone | session=sess-hot | seq=9\n',
+      writeText: async () => {},
+    },
+    sessions: {
+      get: (id) => (id === 'sess-hot' ? { events: [] } : undefined),
+      fork: (sid, seq) => {
+        forked.push({ sid, seq })
+        return { id: 'child-hot' }
+      },
+      create: () => ({ id: 'child-cold' }),
+    },
+  })
+  apply(ctx)
+  const rewind = registered.find((t) => t.name === 'mop_rewind')
+  await rewind.execute(
+    { sessionId: 'sess-hot', label: 'milestone' },
+    { agent: agent('session-a') },
+  )
+  assert.deepEqual(forked, [{ sid: 'sess-hot', seq: 9 }]) // 取最新，非最旧 seq=3
 })
 
 test('rewind rejects when checkpoint session does not match sessionId', async () => {
