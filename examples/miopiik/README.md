@@ -3,9 +3,10 @@
 这是「MiOpIIk 三层 + 监督层」agent preset 的**脱敏、可重建模板**，镜像本机 live preset
 （`${DSH_HOME}/.agent-presets/miopiik/`）。用途：新机器/新用户可据此重建完整 workflow。
 
-脱敏边界：不包含任何 API key、模型 allowlist 内容、用户偏好或私有路径——mop 行用便携的
-`${DSH_HOME}/profiles/...`（loader 转 file URL），persona 内引用的是路径（如
-`~/.dsh/memory/global/AGENTS.md`），而非其内容。真实凭据、allowlist、用户偏好留在本机。
+脱敏边界：不包含任何 API key、模型 allowlist 内容、用户偏好或私有路径——mop 行用裸名
+`@chillizu/mop-*`（经 `${DSH_HOME}/profiles/node_modules` 解析，见安装），persona 内
+引用的是路径（如 `~/.dsh/memory/global/AGENTS.md`），而非其内容。真实凭据、allowlist、
+用户偏好留在本机。
 
 ## 安装
 
@@ -22,7 +23,12 @@ dsh plugin --profile web add \
   link:./packages/mop-learn \
   link:./packages/mop-run-stats
 
-# 或：免发布等价做法——把包放到 ${DSH_HOME}/profiles/，本示例的 mop 行即指向此处
+# 或：免发布等价做法——把包放到 ${DSH_HOME}/profiles/mop-*，并在
+# ${DSH_HOME}/profiles/node_modules/@chillizu/ 建 symlink（裸名 @chillizu/mop-* 才能解析）：
+#   for p in mop-tool-recovery mop-executor mop-magic-keywords mop-model-auth \
+#            mop-capabilities mop-learn mop-run-stats; do
+#     ln -sfn "${DSH_HOME}/profiles/$p" "${DSH_HOME}/profiles/node_modules/@chillizu/$p"
+#   done
 ```
 
 然后把本目录复制为 preset：

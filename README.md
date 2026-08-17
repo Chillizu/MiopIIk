@@ -42,7 +42,7 @@ dsh plugin --profile web add \
 
 `dsh plugin add` 把声明了 `dsh.bundle` 的依赖自动并入 profile 的 `dsh.profile.bundles` 列表；`dsh` 重启后 `standingKeyFor` 挂载验证。
 
-免发布/pnpm 的等价做法：把包放到 `~/.dsh/profiles/`，在 agent preset 的 `agent.cordis.yml` 加绝对路径行（`name` 用 `${DSH_HOME}/profiles/mop-<feature>/index.js`，loader 转 file URL）；`@deepseek-ai/dsh-*` 依赖靠 `~/.dsh/profiles/node_modules` 愈合 fallback 解析。两种姿势都可用，bundle 姿势可被 `dsh plugin list/remove` 管理。
+免发布/pnpm 的等价做法：把包放到 `~/.dsh/profiles/mop-*`，在 `~/.dsh/profiles/node_modules/@chillizu/` 建 symlink 指向对应目录（`ln -sfn ~/.dsh/profiles/mop-<feature> ~/.dsh/profiles/node_modules/@chillizu/mop-<feature>`），preset 行写**裸名** `@chillizu/mop-<feature>`——这样 Web UI 插件列表显示的是优雅的包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 愈合 fallback 解析）。两种姿势都可用，bundle 姿势可被 `dsh plugin list/remove` 管理。
 
 ## 设计（计划树）
 
