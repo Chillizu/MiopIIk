@@ -28,15 +28,15 @@ idempotent and gitignored.
    (`packages/subagent/subagent-in-process-driver/src/index.ts:102`) and throws
    `TypeError: Cannot read properties of undefined (reading 'aborted')` at
    `:107`. The mock tests cannot see this.
-3. **Canary for a second real bug** — mounting `mop-executor` through the real
-   Loader fails: its `Config` uses `z.number().int()`
-   (`packages/mop-executor/index.js:15`), which does not exist in real
-   `@deepseek-ai/schemastery@3.18.1` (nor original `schemastery@3.18.0`); the
-   harness idiom is `z.natural()` (cf. `dsh-tools` Config). The mock stub
-   `test/stubs/schemastery.js` hides this with a no-op `.int()`. `cordis.yml`
-   therefore excludes mop-executor; `cordis.with-executor.yml` + test 3 pin the
-   failure. After fixing the Config, flip test 3 to assert the `maxOutputChars`
-   (4000) default.
+3. **Config-schema contract is now caught in CI too** — mock tests
+   (`test/*.test.js`) import packages through **real** `@deepseek-ai/schemastery`
+   (npm devDependency v3.18.1), not a stub, so a bogus method like
+   `z.number().int()` or `z.string().optional()` throws at import and fails
+   `npm test` in CI. This was the `z.number().int()` bug
+   (`packages/mop-executor/index.js:15`, now fixed to `z.natural()`) that the old
+   no-op `test/stubs/schemastery.js` masked. The composition test additionally
+   boots every package's `Config` through the **real Loader** (asserting the
+   coerced defaults land in `apply(config)`), the last-line contract anchor.
 
 ## Why symlinks instead of npm devDependencies
 
@@ -51,3 +51,14 @@ deterministically, without touching `package.json`.
 Note: `npm install`/`npm run` in this session's shell can be poisoned by the
 harness process's inherited `npm_*` env vars; running tests with a clean env
 (`env -i HOME=$HOME PATH=$PATH npm run test:composition`) is the reliable form.
+
+## CI coverage boundary (P1-6)
+
+CI (`.github/workflows/ci.yml`) runs `check`/`lint`/`format:check`/`npm test`.
+The mock tests (`npm test`) now exercise **real schemastery** for every package's
+`Config` (see §3), so Config-contract regressions are caught in CI. What CI still
+cannot cover: the full **real-boot** checks here (`boot()` through the harness
+Loader, real spawn-driver error, real token-meter projection folding) — those
+need a built harness checkout (`/opt/deepseek-harness`) that is not available on
+free GitHub runners. **CI green ⇒ mock green, not composition green.** Run
+`npm run test:composition` locally before a release.

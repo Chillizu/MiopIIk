@@ -24,3 +24,7 @@ jobs:
         run: npm run format:check
       - name: Test
         run: npm test
+      # NOTE (P1-6): `npm test` uses real @deepseek-ai/schemastery (npm devDep),
+      # so Config-contract regressions are caught here. The real-composition
+      # tests (npm run test:composition) need a built harness checkout and are
+      # local-only; see test/composition/README.md "CI coverage boundary".
