@@ -90,7 +90,10 @@ export function apply(ctx, config = {}) {
         const suffix = truncated
           ? `\n…[output truncated at ${maxOutputChars} chars; full text in executor subagent session ${run.id}]`
           : ''
-        return `[${result.stopReason}] ${shown}${suffix}`
+        // D29v3 H3-cost 依赖：无论是否截断，始终在返回末尾暴露 executor 子会话 id，
+        // 供审查层 mop_run_stats(sessionId) 采 token 四桶（之前只在截断 suffix 里，短输出拿不到）。
+        const sessionTag = `\n[executor-session: ${run.id}]`
+        return `[${result.stopReason}] ${shown}${suffix}${sessionTag}`
       },
     }),
   )

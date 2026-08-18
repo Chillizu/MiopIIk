@@ -16,6 +16,7 @@ function makeCtx() {
       start: async (name, request) => {
         starts.push({ name, request })
         return {
+          id: 'exec-session-1',
           result: Promise.resolve({
             stopReason: 'completed',
             output: [{ type: 'text', text: 'done' }],
@@ -37,6 +38,7 @@ test('mop_spawn_executor passes model + toolFilter and returns output', async ()
   )
   assert.match(result, /completed/)
   assert.match(result, /done/)
+  assert.match(result, /\[executor-session: exec-session-1\]/)
   assert.equal(starts[0].name, 'spawn')
   assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-pro')
   assert.equal(starts[0].request.agentOptions.provider, 'deepseek-official')
@@ -64,6 +66,7 @@ test('default model is flash', async () => {
 test('long output is truncated with a pointer to the executor session', async () => {
   const { ctx, registered } = makeCtx()
   ctx.subagents.start = async () => ({
+    id: 'exec-session-1',
     result: Promise.resolve({
       stopReason: 'completed',
       output: [{ type: 'text', text: 'x'.repeat(9000) }],

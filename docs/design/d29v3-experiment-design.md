@@ -55,7 +55,7 @@ D29v2 用「缺陷注入进参考材料段」，执行层按 Acceptance 执行�
 | H0 前置·传播可行性 | 传播缺陷 P≥8 | P<8 → H2 NULL + 设计失败（走 fallback 阶梯） | 可行性门，非统计 |
 | H0 前置·样本 | P≥20（方向性） | — | 50 达 CI 半宽 ≤10%，cost 敏感可二选一写死 |
 | H1 执行层 rewind | flash ≤15% | flash >15% 且明显劣于 pro | itemized Acceptance 违反计 |
-| H2 监督漏报 | 两模型 ≤20% | **对照式**：flash >20% 且 pro ≤20% 才 KILL flash；双超 20% = 任务集对监督过难（另判读，非 flash 责任） | 主口径 = 静默传播 |
+| H2 监督漏报 | 两模型 ≤20% | **对照式**：flash >20% 且 pro ≤20% 才 KILL flash；双超 20% = 任务集对监督过难（另判读，非 flash 责任） | 主口径 = 全部传播（命中谓词 P）；flag-vs-silent 独立维度报表，不进分母（§8.5） |
 | H3-latency 延迟 | flash 墙钟 ≤0.77×pro | flash 墙钟 >0.77×pro | D29v2 实测 0.88×，**有 KILL 风险，独立判读不污染 H2** |
 | H3-cost 成本 | flash 成本 ≤0.77×pro | flash 成本 >0.77×pro | mop_run_stats 四桶 × 定价表（见模型路由实验 §4） |
 | H4 交叉监督（若触发） | joint ≤20% 且 < min(单模型) | — | 回写 D31 |
@@ -121,3 +121,9 @@ D29v2 用「缺陷注入进参考材料段」，执行层按 Acceptance 执行�
 ### 8.4 实验基线 commit 钉死
 
 实验基线 commit = `007a029`（冻结终审时刻）。产品侧对 mop-* 的后续修复不影响本实验基线；执行规程见 [model-routing-runbook.md](model-routing-runbook.md)。
+
+### 8.5 H2 分母口径修正（Step 1 试跑发现，2026-08-18）
+
+Step 1（t01/t16 × 2 exec 模型）发现 flag-vs-silent 与执行模型强相关：flash 静默采纳、pro 显式 flag 后采纳。若按原「主口径 = 静默传播」作 H2 分母，pro 的主动 flag 会把其传播数系统性压小 → 分母不再一致 → 测的是「执行层 flag 行为」而非「监督层漏报」。
+
+**修正**：H2 漏报率 = 未报出 / P（P = 全部命中谓词，不分 flag-vs-silent）；flag-vs-silent 降为独立报表维度，最终报告如实标注「pro 主动 flag 给监督层 hint」的 confound。门数值（≤20%）不变，仅澄清分母。
