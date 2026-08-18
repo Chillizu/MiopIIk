@@ -54,12 +54,13 @@ function agent(id) {
   }
 }
 
-test('apply registers the six recovery tools', () => {
+test('apply registers the seven recovery tools', () => {
   const { ctx, registered } = makeCtx()
   apply(ctx)
   assert.deepEqual(registered.map((t) => t.name).sort(), [
     'mop_checkpoint',
     'mop_checkpoint_list',
+    'mop_checkpoint_prune',
     'mop_rewind',
     'mop_rule_clear',
     'mop_rule_inject',
@@ -355,4 +356,191 @@ test('agent/disposed cleans up injected rule state', () => {
     show.execute({}, { agent: agent('session-a') }),
     '(no rule injected)',
   )
+})
+
+// ── mop_checkpoint_prune ──
+const PRUNE_FIXTURE =
+  '# header\n' +
+  '\n' +
+  'some prose line\n' +
+  '- [2026-01-01T00:00:00.000Z] legacy-no-session | seq=1\n' +
+  '- [2026-01-02T00:00:00.000Z] c1 | session=s1 | seq=1\n' +
+  '- [2026-01-03T00:00:00.000Z] c2 | session=s2 | seq=2\n' +
+  '- [2026-01-04T00:00:00.000Z] c3 | session=s3 | seq=3\n' +
+  '- [2026-01-05T00:00:00.000Z] c4 | session=s4 | seq=4\n' +
+  '- [2026-01-06T00:00:00.000Z] c5 | session=s5 | seq=5\n'
+
+// content=null 表示文件不存在（stat → undefined）。
+function pruneCtx(content = PRUNE_FIXTURE, opts = {}) {
+  const state = { content, version: 1, statCalls: 0, writeCalls: 0 }
+  const fs = {
+    resolve: async () => ({ key: 'cp' }),
+    stat: async () => {
+      state.statCalls += 1
+      if (state.content === null) return undefined
+      return { version: state.version }
+    },
+    readText: async () => state.content,
+    writeText: async (_t, newContent) => {
+      state.writeCalls += 1
+      if (opts.onWrite) {
+        const r = opts.onWrite(state, newContent)
+        if (r === 'skip') return
+        if (r && r.error) throw r.error
+      }
+      state.content = newContent
+      state.version += 1
+    },
+  }
+  const { ctx, registered } = makeCtx({ fs })
+  apply(ctx)
+  return { registered, state }
+}
+
+test('prune: dry-run 只读不写', async () => {
+  const { registered, state } = pruneCtx()
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await prune.execute({ keep: 3 }, { agent: agent('session-a') })
+  assert.match(result, /dry-run: would prune 2 checkpoint\(s\)/)
+  assert.match(result, /labels: c1, c2/)
+  assert.equal(state.writeCalls, 0)
+  assert.equal(state.content, PRUNE_FIXTURE)
+})
+
+test('prune: confirm:true 正常裁剪并保留最新 keep 条', async () => {
+  const { registered, state } = pruneCtx()
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await prune.execute(
+    { keep: 3, confirm: true },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /pruned 2 checkpoint\(s\), kept 3/)
+  assert.equal(state.writeCalls, 1)
+  const out = state.content
+  // 最新 3 条现行行保留
+  assert.match(out, /c3 \| session=s3/)
+  assert.match(out, /c4 \| session=s4/)
+  assert.match(out, /c5 \| session=s5/)
+  // 最旧 2 条现行行被删
+  assert.doesNotMatch(out, /c1 \| session=s1/)
+  assert.doesNotMatch(out, /c2 \| session=s2/)
+  // 注释/空行/prose/旧格式行原样保留
+  assert.match(out, /# header/)
+  assert.match(out, /some prose line/)
+  assert.match(out, /legacy-no-session \| seq=1/)
+})
+
+test('prune: keep 缺失/负数/非整数/NaN 拒绝', async () => {
+  const { registered } = pruneCtx()
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  for (const bad of [undefined, -1, 1.5, Number.NaN, '3']) {
+    await assert.rejects(
+      () => prune.execute({ keep: bad }, { agent: agent('session-a') }),
+      /keep 必须为非负整数/,
+    )
+  }
+})
+
+test('prune: confirm 非布尔值拒绝', async () => {
+  const { registered } = pruneCtx()
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  for (const bad of ['true', 1, null]) {
+    await assert.rejects(
+      () =>
+        prune.execute({ keep: 3, confirm: bad }, { agent: agent('session-a') }),
+      /confirm 必须为布尔值/,
+    )
+  }
+})
+
+test('prune: keep=0 需 confirm:true，且保留非现行行', async () => {
+  const dry = pruneCtx()
+  const dryRun = dry.registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const preview = await dryRun.execute(
+    { keep: 0 },
+    { agent: agent('session-a') },
+  )
+  assert.match(preview, /dry-run: would prune 5 checkpoint\(s\)/)
+  assert.equal(dry.state.writeCalls, 0)
+
+  const real = pruneCtx()
+  const realRun = real.registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await realRun.execute(
+    { keep: 0, confirm: true },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /pruned 5 checkpoint\(s\), kept 0/)
+  assert.doesNotMatch(real.state.content, /\| session=/)
+  assert.match(real.state.content, /# header/)
+  assert.match(real.state.content, /some prose line/)
+  assert.match(real.state.content, /legacy-no-session \| seq=1/)
+})
+
+test('prune: 文件不存在无修改', async () => {
+  const { registered, state } = pruneCtx(null)
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await prune.execute(
+    { keep: 3, confirm: true },
+    { agent: agent('session-a') },
+  )
+  assert.equal(result, '(no checkpoints)')
+  assert.equal(state.writeCalls, 0)
+})
+
+test('prune: N <= keep 无修改（dry-run 与 confirm 都不写）', async () => {
+  const dry = pruneCtx()
+  const dryRun = dry.registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const preview = await dryRun.execute(
+    { keep: 10 },
+    { agent: agent('session-a') },
+  )
+  assert.match(preview, /nothing to prune \(5 checkpoints <= keep 10\)/)
+  assert.equal(dry.state.writeCalls, 0)
+
+  const real = pruneCtx()
+  const realRun = real.registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await realRun.execute(
+    { keep: 10, confirm: true },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /nothing to prune \(5 checkpoints <= keep 10\)/)
+  assert.equal(real.state.writeCalls, 0)
+})
+
+test('prune: CAS 版本冲突重试（重读重算）', async () => {
+  const { registered, state } = pruneCtx(PRUNE_FIXTURE, {
+    onWrite: (st) => {
+      if (st.writeCalls === 1) {
+        return {
+          error: Object.assign(new Error('changed'), {
+            code: 'FS_STALE_VERSION',
+          }),
+        }
+      }
+    },
+  })
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  const result = await prune.execute(
+    { keep: 3, confirm: true },
+    { agent: agent('session-a') },
+  )
+  assert.match(result, /pruned 2 checkpoint\(s\), kept 3/)
+  assert.equal(state.writeCalls, 2) // 第一次冲突，第二次成功
+  assert.doesNotMatch(state.content, /c1 \| session=s1/)
+  assert.match(state.content, /c5 \| session=s5/)
+})
+
+test('prune: 非重试写入失败不破坏原文件/版本', async () => {
+  const { registered, state } = pruneCtx(PRUNE_FIXTURE, {
+    onWrite: () => ({ error: new Error('io failure') }),
+  })
+  const prune = registered.find((t) => t.name === 'mop_checkpoint_prune')
+  await assert.rejects(
+    () =>
+      prune.execute({ keep: 3, confirm: true }, { agent: agent('session-a') }),
+    /io failure/,
+  )
+  assert.equal(state.writeCalls, 1)
+  assert.equal(state.content, PRUNE_FIXTURE) // 原内容不变
+  assert.equal(state.version, 1) // 版本不变
 })

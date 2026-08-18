@@ -135,3 +135,63 @@ test('mop_model_list 显示默认 + allowlist', async () => {
   assert.match(out, /默认模型: deepseek-official\/deepseek-v4-flash/)
   assert.match(out, /deepseek-official\/deepseek-v4-pro/)
 })
+
+test('mop_model_revoke 从 allowlist 移除并同步缓存', async () => {
+  const { tools, path } = await withCtx({ allowlist: 'a/b\nc/d\n' })
+  const out = await tools['mop_model_revoke'].execute({
+    provider: 'a',
+    model: 'b',
+  })
+  assert.match(out, /revoked: a\/b/)
+  const raw = await readFile(path, 'utf8')
+  assert.doesNotMatch(raw, /a\/b/)
+  assert.match(raw, /c\/d/)
+  // 缓存同步：list 不再包含已撤销 key
+  const listed = await tools['mop_model_list'].execute()
+  assert.doesNotMatch(listed, /a\/b/)
+  assert.match(listed, /c\/d/)
+})
+
+test('mop_model_revoke 对不存在的 key 幂等', async () => {
+  const { tools } = await withCtx({ allowlist: 'a/b\n' })
+  const out = await tools['mop_model_revoke'].execute({
+    provider: 'x',
+    model: 'y',
+  })
+  assert.match(out, /not authorized: x\/y/)
+})
+
+test('mop_model_revoke 拒绝撤销当前默认模型', async () => {
+  const { tools } = await withCtx({ allowlist: 'a/b\n' })
+  await assert.rejects(
+    () =>
+      tools['mop_model_revoke'].execute({
+        provider: 'deepseek-official',
+        model: 'deepseek-v4-flash',
+      }),
+    /当前默认模型/,
+  )
+})
+
+test('mop_model_revoke 拒绝空参数', async () => {
+  const { tools } = await withCtx()
+  await assert.rejects(
+    () => tools['mop_model_revoke'].execute({ provider: '', model: 'x' }),
+    /provider 和 model 必填/,
+  )
+})
+
+test('mop_model_revoke 保留注释/其它条目与 list 前缀', async () => {
+  const { tools, path } = await withCtx({
+    allowlist: '# comment\n- a/b\nc/d\n',
+  })
+  const out = await tools['mop_model_revoke'].execute({
+    provider: 'c',
+    model: 'd',
+  })
+  assert.match(out, /revoked: c\/d/)
+  const raw = await readFile(path, 'utf8')
+  assert.match(raw, /# comment/)
+  assert.match(raw, /- a\/b/)
+  assert.doesNotMatch(raw, /c\/d/)
+})

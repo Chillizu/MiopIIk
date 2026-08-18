@@ -62,38 +62,133 @@ export function apply(ctx, config = {}) {
     defineTool({
       name: 'mop_spawn_executor',
       description:
-        'Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors; model/provider optional (defaults to the configured default model).',
+        'Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors; model/provider optional (defaults to the configured default model); timeoutMs optional (ms, hard timeout that aborts the child).',
       parameters: {
         prompt: { type: 'string', required: true },
         model: { type: 'string' },
         provider: { type: 'string' },
+        timeoutMs: {
+          type: 'number',
+          description:
+            'Optional hard timeout in milliseconds. When set, the executor subagent is aborted after this long and the tool returns an [aborted] timeout result. Omit for no timeout.',
+        },
       },
       output: stringOutput,
       async execute(args, exec) {
         const provider = args.provider || providerDefault
         const model = args.model || modelDefault
-        const run = await ctx.subagents.start('spawn', {
-          label: `executor:${model}`,
-          prompt: [{ type: 'text', text: args.prompt }],
-          parent: exec.agent,
-          agentOptions: { provider, model },
-          persona: EXECUTOR_PERSONA,
-          toolFilter: EXECUTOR_TOOL_FILTER,
-          signal: exec.signal,
-          maxDepth: 1,
-        })
-        const result = await run.result
-        const body = textOf(result.output)
-        const maxChars = maxOutputChars
-        const truncated = body.length > maxChars
-        const shown = truncated ? body.slice(0, maxChars) : body
-        const suffix = truncated
-          ? `\n…[output truncated at ${maxOutputChars} chars; full text in executor subagent session ${run.id}]`
-          : ''
-        // D29v3 H3-cost 依赖：无论是否截断，始终在返回末尾暴露 executor 子会话 id，
-        // 供审查层 mop_run_stats(sessionId) 采 token 四桶（之前只在截断 suffix 里，短输出拿不到）。
-        const sessionTag = `\n[executor-session: ${run.id}]`
-        return `[${result.stopReason}] ${shown}${suffix}${sessionTag}`
+
+        // timeoutMs 可选：提供时必须是有限正数，缺省 = 无超时（行为不变）。
+        const timeoutMs = args.timeoutMs
+        if (
+          timeoutMs !== undefined &&
+          (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
+        ) {
+          throw new Error(
+            `mop_spawn_executor: timeoutMs 必须为有限正数（毫秒），收到 ${String(timeoutMs)}`,
+          )
+        }
+
+        // 组合取消通道：exec.signal 是工具自身的取消信号，timeout 走额外 controller。
+        // 两者任一触发都 abort controller.signal，再经 provider 桥接 cancel 子代理。
+        const controller = new AbortController()
+        let cancelled = false
+        const forward = (reason) => {
+          cancelled = true
+          controller.abort(reason)
+        }
+        const sourceSignal = exec && exec.signal
+        const isSignal =
+          sourceSignal && typeof sourceSignal.addEventListener === 'function'
+        if (isSignal && sourceSignal.aborted) {
+          // 调用前已被取消：直接返回取消结果，不调用 subagents.start（已 aborted 的
+          // signal 不会发未来事件，spawn 只会被立刻 cancel，无意义）。
+          return '[aborted] executor cancelled (caller signal already aborted)'
+        }
+        if (isSignal) {
+          sourceSignal.addEventListener('abort', forward, { once: true })
+        }
+
+        // timeout 用「Promise 竞速」而非只依赖 provider 桥接：保证 execute 一定在
+        // timeoutMs 内 settle，即使 provider 在 abort 检查与监听之间存在竞态（漏接 abort）。
+        let timedOut = false
+        let timer = null
+        let timeoutPromise = null
+        if (timeoutMs !== undefined) {
+          timeoutPromise = new Promise((resolve) => {
+            timer = setTimeout(() => {
+              timedOut = true
+              controller.abort(
+                new Error(`mop_spawn_executor timeout after ${timeoutMs}ms`),
+              )
+              resolve()
+            }, timeoutMs)
+          })
+        }
+
+        try {
+          let run
+          try {
+            run = await ctx.subagents.start('spawn', {
+              label: `executor:${model}`,
+              prompt: [{ type: 'text', text: args.prompt }],
+              parent: exec.agent,
+              agentOptions: { provider, model },
+              persona: EXECUTOR_PERSONA,
+              toolFilter: EXECUTOR_TOOL_FILTER,
+              signal: controller.signal,
+              maxDepth: 1,
+            })
+          } catch (error) {
+            // 超时恰好在子代理发布前触发：无 session id 可暴露，返回明确的超时结果。
+            if (timedOut) {
+              return `[aborted] executor timed out after ${timeoutMs}ms before the child was published`
+            }
+            throw error
+          }
+
+          // D29v3 H3-cost 依赖：无论是否截断/超时，始终在返回末尾暴露 executor 子会话 id，
+          // 供审查层 mop_run_stats(sessionId) 采 token 四桶（之前只在截断 suffix 里，短输出拿不到）。
+          const sessionTag = `\n[executor-session: ${run.id}]`
+
+          let result
+          if (timeoutPromise !== null) {
+            const raced = await Promise.race([
+              run.result,
+              timeoutPromise.then(() => ({ __timedOut: true })),
+            ])
+            if (raced && raced.__timedOut) {
+              // 超时先到：立即返回，绝不继续无限等待 run.result（覆盖 provider 漏接 abort 的竞态）。
+              run.result.catch(() => {}) // 防超时后 run.result 迟到 reject → unhandled rejection
+              return `[aborted] executor timed out after ${timeoutMs}ms${sessionTag}`
+            }
+            result = raced
+          } else {
+            result = await run.result
+          }
+
+          // timer 已触发时优先报 timeout：provider 若正确桥接 abort，run.result 会
+          // 在 abort 内同步 settle 为 aborted，race 返回的是真结果而非 sentinel，
+          // 此时必须靠 timedOut 标志区分「超时中止」与「普通 aborted」。
+          if (timedOut) {
+            return `[aborted] executor timed out after ${timeoutMs}ms${sessionTag}`
+          }
+          if (cancelled) {
+            return `[aborted] executor cancelled${sessionTag}`
+          }
+
+          const body = textOf(result.output)
+          const maxChars = maxOutputChars
+          const truncated = body.length > maxChars
+          const shown = truncated ? body.slice(0, maxChars) : body
+          const suffix = truncated
+            ? `\n…[output truncated at ${maxOutputChars} chars; full text in executor subagent session ${run.id}]`
+            : ''
+          return `[${result.stopReason}] ${shown}${suffix}${sessionTag}`
+        } finally {
+          if (timer !== null) clearTimeout(timer)
+          if (isSignal) sourceSignal.removeEventListener('abort', forward)
+        }
       },
     }),
   )

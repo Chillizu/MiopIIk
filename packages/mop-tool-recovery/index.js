@@ -103,6 +103,58 @@ async function appendCheckpoint(fs, target, line, policy) {
   )
 }
 
+/** 纯计算：对 checkpoint 内容按 keep 裁剪。只返回结果，不写文件。 */
+function computePrune(content, keep) {
+  const lines = content.split('\n')
+  const cpIndexes = []
+  lines.forEach((line, i) => {
+    if (parseCheckpointLine(line) !== null) cpIndexes.push(i)
+  })
+  const N = cpIndexes.length
+  if (N <= keep) {
+    return { N, keep, removeCount: 0, prunedLabels: [], kept: null }
+  }
+  const removeCount = N - keep
+  // 只删最旧 removeCount 条现行 checkpoint 行（append-only = 文件顺序即时间序）；
+  // 注释/空行/旧格式行/普通文本永不删除（parseCheckpointLine null）。
+  const removeIndexes = new Set(cpIndexes.slice(0, removeCount))
+  const prunedLabels = cpIndexes
+    .slice(0, removeCount)
+    .map((i) => parseCheckpointLine(lines[i]).label)
+  const kept = lines.filter((_, i) => !removeIndexes.has(i))
+  return { N, keep, removeCount, prunedLabels, kept }
+}
+
+/**
+ * CAS 重试重写：每次版本冲突都重新 stat + read + 重新 computePrune，再 replaceIfVersion。
+ * 非重试错误直接上抛，原文件与版本不变（writeText 原子替换）。
+ */
+async function pruneWithRetry(fs, target, keep, policy) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const info = await fs.stat(target)
+    if (info === undefined) return { kind: 'absent' }
+    const content = await fs.readText(target)
+    const r = computePrune(content, keep)
+    if (r.removeCount === 0) return { kind: 'nothing', N: r.N }
+    try {
+      await fs.writeText(
+        target,
+        r.kept.join('\n'),
+        { kind: 'replaceIfVersion', version: info.version },
+        undefined,
+        policy,
+      )
+      return { kind: 'pruned', removeCount: r.removeCount }
+    } catch (error) {
+      if (error && error.code === 'FS_STALE_VERSION') continue
+      throw error
+    }
+  }
+  throw new Error(
+    'mop_checkpoint_prune: rewrite failed after retries (concurrent writes)',
+  )
+}
+
 export function apply(ctx) {
   const { tools, fs, sandboxPolicy, sessions, sessionPersistence } = ctx
   // sessionId -> { disposer, text }；规则状态按会话隔离，避免多会话互相覆盖。
@@ -265,6 +317,58 @@ export function apply(ctx) {
               `- ${e.label} | session=${e.session} | seq=${e.seq}${e.note ? ` | ${e.note}` : ''}`,
           )
           .join('\n')
+      },
+    }),
+  )
+
+  tools.register(
+    defineTool({
+      name: 'mop_checkpoint_prune',
+      description:
+        'Prune old checkpoints from .dsh/memory/checkpoints.md, keeping the newest `keep` current-format checkpoint lines. Only lines parseable as current checkpoints are removed; comments, blank lines, legacy-format lines and prose are preserved in place. Dry-run by default: only `confirm:true` writes. keep=0 clears all current-format checkpoints (high risk, still requires confirm:true).',
+      parameters: {
+        keep: { type: 'integer', required: true },
+        confirm: { type: 'boolean' },
+      },
+      output: stringOutput,
+      async execute(args, exec) {
+        const agent = exec.agent
+        const cwd =
+          agent &&
+          agent.session &&
+          agent.session.header &&
+          agent.session.header.cwd
+        if (!cwd)
+          throw new Error('mop_checkpoint_prune: session cwd unavailable')
+        const keep = args.keep
+        if (!Number.isInteger(keep) || keep < 0)
+          throw new Error(
+            `mop_checkpoint_prune: keep 必须为非负整数，收到 ${String(keep)}`,
+          )
+        const confirm = args.confirm
+        if (confirm !== undefined && typeof confirm !== 'boolean')
+          throw new Error(
+            'mop_checkpoint_prune: confirm 必须为布尔值（仅严格 true 才写入）',
+          )
+        const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
+        const policy = sandboxPolicy.resolve({ session: agent.session })
+
+        if (confirm === true) {
+          const r = await pruneWithRetry(fs, target, keep, policy)
+          if (r.kind === 'absent') return '(no checkpoints)'
+          if (r.kind === 'nothing')
+            return `nothing to prune (${r.N} checkpoints <= keep ${keep})`
+          return `pruned ${r.removeCount} checkpoint(s), kept ${keep}`
+        }
+
+        // dry-run（confirm 缺省或 false）：只读，绝不写。
+        const content = await readExisting(fs, target)
+        if (content === '') return '(no checkpoints)'
+        const preview = computePrune(content, keep)
+        if (preview.N === 0) return '(no current-format checkpoints to prune)'
+        if (preview.removeCount === 0)
+          return `nothing to prune (${preview.N} checkpoints <= keep ${keep})`
+        return `dry-run: would prune ${preview.removeCount} checkpoint(s) — labels: ${preview.prunedLabels.join(', ')} (kept ${keep})`
       },
     }),
   )

@@ -1,6 +1,6 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
-import { readFile, appendFile, mkdir } from 'node:fs/promises'
+import { readFile, appendFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -161,6 +161,56 @@ export function apply(ctx, config = {}) {
           'allowlist 缓存于首次读取/授权时刷新；手工编辑文件需重启会话生效',
         )
         return lines.join('\n')
+      },
+    }),
+  )
+
+  // ── mop_model_revoke：从 allowlist 移除 ──
+  ctx.tools.register(
+    defineTool({
+      name: 'mop_model_revoke',
+      description:
+        '撤销一个 provider/model 的 subagent 授权：从全局模型 allowlist 移除（默认 ~/.dsh/memory/global/model-allowlist.md，可经 config.allowlistPath 覆盖）。当前默认模型隐式授权，无法撤销。',
+      parameters: {
+        provider: { type: 'string', required: true },
+        model: { type: 'string', required: true },
+      },
+      output: stringOutput,
+      async execute(args) {
+        const provider = (args.provider || '').trim()
+        const model = (args.model || '').trim()
+        if (!provider || !model)
+          throw new Error('mop_model_revoke: provider 和 model 必填')
+        const key = `${provider}/${model}`
+        return withAuthLock(async () => {
+          if (key === defaultKey()) {
+            throw new Error(
+              `mop_model_revoke: ${key} 是当前默认模型，隐式授权，不在 allowlist，无法撤销`,
+            )
+          }
+          const set = await loadAllowlist()
+          if (!set.has(key)) return `not authorized: ${key}`
+          const path = allowlistPath()
+          let raw = ''
+          try {
+            raw = await readFile(path, 'utf8')
+          } catch {
+            /* 不存在则视为空 */
+          }
+          // 与 loadAllowlist 同一规范化：trim 后跳过空行/注释，去 `- ` 前缀，命中即删。
+          // 注释/空行/其它条目原样保留。
+          const isTarget = (line) => {
+            const t = line.trim()
+            if (!t || t.startsWith('#')) return false
+            return t.replace(/^-\s*/, '') === key
+          }
+          const kept = raw.split('\n').filter((line) => !isTarget(line))
+          // 可信主机配置直接 writeFile；进程内由 withAuthLock 串行化。跨进程并发 revoke
+          // 与 authorize 存在丢行窗口（revoke 是低频运维操作，文档化接受，不引入 fs-seam CAS）。
+          await writeFile(path, kept.join('\n'), 'utf8')
+          set.delete(key)
+          return `revoked: ${key}`
+        })
       },
     }),
   )
