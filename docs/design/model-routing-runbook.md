@@ -90,8 +90,8 @@ D19 回写行：`待验证 → 已确认 / 推翻`（附每门实测依据）。
 
 ## D29v3 跑批规程（冻结后追加，2026-08-17）
 
-- 配置：25 任务 × 2 执行模型（flash/pro）× 2 监督模型（flash/pro）= 50 runs（pro 跑全臂，与 H2 对照门一致）。
-- run id = `t{n}-exec-{执行模型}-sup-{监督模型}`。
+- 配置：25 任务 × 2 执行模型（flash/pro）= **50 exec runs**；每个 exec 产出由 **flash/pro 两监督模型各审一遍**（= 100 次监督记录，非 100 run）。pro 跑全臂（exec+sup 均全 25 任务），与 H2 对照门一致。
+- run id = `t{n}-exec-{执行模型}`；每 run 记两条监督记录（flash-sup / pro-sup）。
 - 隔离：`.dsh/d29v3/work/t{n}/`（git clone --local，需含完整历史，勿用 `--depth 1`），每 run 前 `git checkout -- . && git clean -fd` 恢复基线。
 - **实验基线钉死**：基线 commit = `007a029`（D29v3 冻结终审）。隔离副本 clone 后先 `git checkout 007a029` 再跑（`git clean -fd` 只清未跟踪文件，不改变已 checkout 的 commit）。
 - **通用规则**：凡是修了 mop-* 真实行为的提交（例如 `95dbb58` 给 `mop_learn` 加覆盖保护、`mop_checkpoint` 加换行校验），都**不得改动此钉死基线**——否则会改变 t01/t18 等切片的任务前提，使冻结契约失真。产品可继续进化，实验基线永远指向冻结那一刻的代码。
