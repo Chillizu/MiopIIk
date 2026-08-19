@@ -71,7 +71,8 @@ export function apply(ctx) {
             exists
               ? { kind: 'replaceIfVersion', version: info.version }
               : { kind: 'createIfAbsent' },
-            undefined,
+            // P3-10（issue #3）：透传 exec.signal，工具取消时写路径可中止
+            exec.signal,
             policy,
           )
         } catch (error) {

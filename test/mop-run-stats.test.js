@@ -85,6 +85,29 @@ test('tokenUsage 键缺失（tokenMeter 未挂载）→ 报错', async () => {
   )
 })
 
+// P3-7 回归（issue #3）：live 会话 tokenUsage 缺失时，旧代码会掉进 cold 兜底，
+// coldSnapshot 一 reject 就把「tokenMeter 未挂载」误诊为「不存在或未持久化」。
+test('live 会话 tokenUsage 缺失 → 不转 cold、正确报 tokenMeter 未挂载', async () => {
+  let coldCalled = false
+  const tool = captureTool({
+    sessions: { get: (id) => (id === 's-live' ? { id: 's-live' } : undefined) },
+    sessionProjections: {
+      snapshot: () => ({ asOfSeq: 5, values: {} }), // tokenMeter 未挂载
+    },
+    sessionProjectionCache: {
+      coldSnapshot: async () => {
+        coldCalled = true
+        throw new Error('not found')
+      },
+    },
+  })
+  await assert.rejects(
+    () => tool.execute({ sessionId: 's-live' }),
+    /tokenUsage 投影不可用（tokenMeter 未挂载）/,
+  )
+  assert.equal(coldCalled, false, 'live 会话不得走 cold 兜底')
+})
+
 test('session 不存在/未持久化（coldSnapshot reject）→ 报错', async () => {
   const tool = captureTool({
     sessions: { get: () => undefined },

@@ -65,7 +65,9 @@ async function readExisting(fs, target) {
  * 原子追加一行到 checkpoint 文件：CAS（version）防并发会话写覆盖。
  * 冲突（FS_STALE_VERSION / FS_NOT_OBSERVED）重试，其余错误照常抛。
  */
-async function appendCheckpoint(fs, target, line, policy) {
+// signal 透传（P3-10，issue #3）：工具被取消时 fs seam 应能随 exec.signal
+// 中止写路径，而不是写一半状态不明的文件。
+async function appendCheckpoint(fs, target, line, signal, policy) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const info = await fs.stat(target)
     if (info === undefined) {
@@ -74,7 +76,7 @@ async function appendCheckpoint(fs, target, line, policy) {
           target,
           line,
           { kind: 'createIfAbsent' },
-          undefined,
+          signal,
           policy,
         )
         return
@@ -89,7 +91,7 @@ async function appendCheckpoint(fs, target, line, policy) {
         target,
         prev + line,
         { kind: 'replaceIfVersion', version: info.version },
-        undefined,
+        signal,
         policy,
       )
       return
@@ -129,7 +131,7 @@ function computePrune(content, keep) {
  * CAS 重试重写：每次版本冲突都重新 stat + read + 重新 computePrune，再 replaceIfVersion。
  * 非重试错误直接上抛，原文件与版本不变（writeText 原子替换）。
  */
-async function pruneWithRetry(fs, target, keep, policy) {
+async function pruneWithRetry(fs, target, keep, signal, policy) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const info = await fs.stat(target)
     if (info === undefined) return { kind: 'absent' }
@@ -141,7 +143,7 @@ async function pruneWithRetry(fs, target, keep, policy) {
         target,
         r.kept.join('\n'),
         { kind: 'replaceIfVersion', version: info.version },
-        undefined,
+        signal,
         policy,
       )
       return { kind: 'pruned', removeCount: r.removeCount }
@@ -215,7 +217,7 @@ export function apply(ctx) {
         const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd })
         const line = formatCheckpointLine(label, sid, boundary, note)
         const policy = sandboxPolicy.resolve({ session: agent.session })
-        await appendCheckpoint(fs, target, line, policy)
+        await appendCheckpoint(fs, target, line, exec.signal, policy)
         return `checkpoint OK: ${label} @ session ${sid} seq ${boundary}`
       },
     }),
@@ -354,7 +356,7 @@ export function apply(ctx) {
         const policy = sandboxPolicy.resolve({ session: agent.session })
 
         if (confirm === true) {
-          const r = await pruneWithRetry(fs, target, keep, policy)
+          const r = await pruneWithRetry(fs, target, keep, exec.signal, policy)
           if (r.kind === 'absent') return '(no checkpoints)'
           if (r.kind === 'nothing')
             return `nothing to prune (${r.N} checkpoints <= keep ${keep})`
