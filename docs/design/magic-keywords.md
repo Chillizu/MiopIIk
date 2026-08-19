@@ -1,6 +1,6 @@
 # 魔法关键词设计（ultrathink / workflowz 触发 + orchestrate 常驻）
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D15。来源：OMP `src/modes/{magic-keywords,markdown-prose,ultrathink,orchestrate,workflow}.ts` + `prompts/system/*-notice.md` 原文（本地 17.2.15）。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D15。来源：OMP `src/modes/{magic-keywords,markdown-prose,ultrathink,orchestrate,workflow}.ts` + `prompts/system/*-notice.md` 原文（本地 17.2.15）。
 
 ## 1. 关键词定义（OMP 行为；两个 hook 关键词 + orchestrate 常驻）
 
@@ -57,3 +57,11 @@
 - `Config.notices` 与默认 **合并**（`{...DEFAULT_NOTICES, ...config.notices}`），用户新增/覆盖单个关键词不会整体替换默认、丢掉 `ultrathink`/`workflowz`。
 
 触发记录与显式 slash command 是后续方向（不阻塞 v1）。
+
+## 7. notice 持久化与 token 成本（已知边界，issue #3）
+
+注入的 notice 走 `createUserMessage({ form: 'notice' })`，是**耐久的 `user/message` 会话日志条目**，不是一次性系统旁白：
+
+- 每次命中关键词都会追加一条 notice 进会话事件流，**重复触发会累积**，后续每轮 LLM 请求都带上这些历史 notice（token 成本随触发次数线性增长）；
+- 这是"model-visible 即 logged"哲学的代价面：可见性/可审计性优先于 token 节省；
+- 缓解：同一任务的重复关键词（如每轮都写 ultrathink）由用户习惯控制；`Config.enabled: false` 可在评测场景整体关闭；去重/节流（同关键词每会话只注入一次）列入后续方向，v1 不做——去重状态本身是新的会话级可变状态，与"无隐式状态"原则相冲。

@@ -1,6 +1,6 @@
 # 阶段一 Runbook：preset + 协议跑通四层
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D25（落地形态）、U1（监督层拓扑）、U2（session_query 授权 spike）。本文是验收操作规程：事实 + 步骤 + 验收门，不解释设计理由（设计见 [architecture-3-layer](architecture-3-layer.md) 与 [communication-protocol](communication-protocol.md)）。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D25（落地形态）、U1（监督层拓扑）、U2（session_query 授权 spike）。本文是验收操作规程：事实 + 步骤 + 验收门，不解释设计理由（设计见 [architecture-3-layer](architecture-3-layer.md) 与 [communication-protocol](communication-protocol.md)）。
 
 ## 0. 前置
 
