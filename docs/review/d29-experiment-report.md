@@ -1,6 +1,6 @@
 # D29 模型路由实验 · 结果报告
 
-> 上一级：[model-routing-experiment](../design/model-routing-experiment.md)（预注册骨架）、[PLAN.md](../../PLAN.md)（D19）。
+> 上一级：[model-routing-experiment](../design/model-routing-experiment.md)（预注册骨架）、[PLAN.md](../PLAN.md)（D19）。
 > 方法：冻结契约 + golden fixtures（.dsh/contracts/d29/）；缺陷注入（defects.md）；双配置 × 双监督；run 明细见 .dsh/d29/results/results.md。
 > 证据等级：执行层产物已按 golden 断言程序化验收（命令可复跑）；墙钟为粗界（见 §5）；token 不可编程采集（如实上报）。
 

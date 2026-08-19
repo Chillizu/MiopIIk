@@ -49,6 +49,13 @@ scan() {
       target=${target%%#*}
       target=${target%%\"*}
       target=${target%% *}
+      # 本地-only 子树白名单（issue #3）：指向不进仓库的本地内容，存在性不可校验——
+      #   ../profile/*   = docs/profile/ 个人画像知识库（本地维护，见 PLAN.md §6）
+      #   ../../.dsh/*   = 仓库根 .dsh/ 本部署地产物（contracts 等，gitignore）
+      # 新增白名单条目前先确认目标子树确实不应入库，勿用它掩盖真断链。
+      case "$target" in
+        ../profile/* | ../../.dsh/*) continue ;;
+      esac
       if [ ! -e "$dir/$target" ]; then
         printf '%s:%s:broken-path:%s\n' "$f" "$line" "$target"
       fi
