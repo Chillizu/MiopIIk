@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-run-stats",
+  "description": "mop_run_stats：会话 token 用量四桶裸遥测（live-first + cold 兜底）",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

@@ -66,6 +66,9 @@ export function apply(ctx, config = {}) {
   }
 
   function defaultKey() {
+    // 懒 ctx.get 而非 inject（P2-4，issue #3）：agentDefaultModel 是可选 seam，inject 会让本插件在缺该服务的
+    // 部署里加载即失败。授权闸不应因此整体不可用——缺失时返回 null，仅失去「默认模型隐式授权」这条捷径，
+    // allowlist 显式授权仍完整工作（fail-closed 语义不变：未授权模型照样被拒）。
     const s = ctx.get('agentDefaultModel')?.currentSelection()
     return s && s.provider && s.model ? `${s.provider}/${s.model}` : null
   }

@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-tool-recovery",
+  "description": "checkpoint/rewind/prune + 会话级规则注入的恢复工具箱",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

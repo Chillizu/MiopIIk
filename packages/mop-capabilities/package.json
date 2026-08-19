@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-capabilities",
+  "description": "DSH seam 能力探测：启动/显式触发探测并落 capabilities.md 清单",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

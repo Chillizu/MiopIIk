@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-learn",
+  "description": "mop_learn：把经验沉淀为 .dsh/skills 持久化技能（CAS 防静默覆盖）",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

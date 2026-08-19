@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-model-auth",
+  "description": "subagent 模型授权闸：agent/request waterfall fail-closed + 全局 allowlist",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

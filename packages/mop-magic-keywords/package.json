@@ -1,5 +1,6 @@
 {
   "name": "@chillizu/mop-magic-keywords",
+  "description": "agent/pre-step 魔法关键词注入（prose-only，notice 形式）",
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",

@@ -43,6 +43,9 @@ const EXECUTOR_PERSONA = `# 执行层（Executor）系统提示
 3. 验收对照：逐条对照 Acceptance 说明验证方式与结果（P0–P3：文件 + 行号 + 风险 + 建议）。
 4. 阻塞：如实上报 [blocked] + 原因 + 已尝试方案；不许静默失败、不许反复重试同一失败源。`
 
+// allow-list 硬契约（P3-8，issue #3）：上游 tools.restrict 对未知工具名直接抛错，凡新增/改名工具，
+// 本列表必须同步更新，否则 mop_spawn_executor 一调用即炸。勿靠 try/catch 吞掉——真实 misconfig
+// （名字拼错、上游改了 restrict 语义）会被静默成「子代理无工具可用」的怪象，极难排查。
 const EXECUTOR_TOOL_FILTER = {
   allow: ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'todo_write'],
 }
