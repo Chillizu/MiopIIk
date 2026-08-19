@@ -109,7 +109,9 @@ ${rows}
 export function apply(ctx) {
   const { tools, fs, sandboxPolicy } = ctx
 
-  async function writeManifest(agent) {
+  // signal 可缺省（P3-10，issue #3）：工具调用路径透传 exec.signal 让取消可中止
+  // 写路径；agent/created 启动监听路径没有 exec 上下文，传 undefined。
+  async function writeManifest(agent, signal) {
     const cwd =
       agent && agent.session && agent.session.header && agent.session.header.cwd
     if (!cwd) throw new Error('mop-capabilities: session cwd unavailable')
@@ -125,15 +127,19 @@ export function apply(ctx) {
       info === undefined
         ? { kind: 'createIfAbsent' }
         : { kind: 'replaceIfVersion', version: info.version },
-      undefined,
+      signal,
       policy,
     )
     return results
   }
 
-  // 根会话（depth 0）启动时自动探测一次；子代理各自不再重复写。best-effort 异步：
+  // 根会话启动时自动探测一次；子代理各自不再重复写。best-effort 异步：
   // 首次工作可能早于 manifest 完成——读清单时检查 status/时间戳，缺失则显式调
   // mop_probe_capabilities。写失败只 console.error，不崩启动。
+  // 深度判定必须容忍 absent：上游 SessionHeader 对顶层会话**不写** delegationDepth
+  // 字段（dsh-session types.ts：「absent (zero) for a top-level session」），
+  // 子代理才有 >= 1。写成 `depth !== 0` 会把 undefined 当非零跳过 → 自动探测
+  // 永不触发（曾被测试 fixture 显式写 0 掩盖，见 issue #3）。
   ctx.on('agent/created', (payload) => {
     const agent = payload && payload.agent
     const depth =
@@ -141,7 +147,7 @@ export function apply(ctx) {
       agent.session &&
       agent.session.header &&
       agent.session.header.delegationDepth
-    if (depth !== 0) return
+    if ((depth ?? 0) !== 0) return
     writeManifest(agent).catch((error) => {
       console.error('mop-capabilities: startup probe failed', error)
     })
@@ -156,7 +162,7 @@ export function apply(ctx) {
       output: stringOutput,
       async execute(_args, exec) {
         const agent = exec.agent
-        const results = await writeManifest(agent)
+        const results = await writeManifest(agent, exec.signal)
         const cwd =
           agent &&
           agent.session &&

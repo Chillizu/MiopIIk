@@ -35,9 +35,18 @@ function makeCtx(overrides = {}) {
   return { ctx, registered, writes }
 }
 
+// 真实 SessionHeader 语义：根会话的 delegationDepth **缺省（absent）**，
+// 只有 subagent 子会话才写 >= 1（dsh-session types.ts）。fixture 不得显式写 0——
+// 那曾把 `depth !== 0` 的条件 bug 掩盖成永远通过（issue #3）。
 function agent(id) {
   return {
-    session: { id, header: { cwd: '/tmp', delegationDepth: 0 } },
+    session: { id, header: { cwd: '/tmp' } },
+  }
+}
+
+function subagentAgent(id) {
+  return {
+    session: { id, header: { cwd: '/tmp', delegationDepth: 1 } },
   }
 }
 
@@ -102,4 +111,41 @@ test('已有 manifest 走 replaceIfVersion CAS，不盲覆盖', async () => {
   await tool.execute({}, { agent: agent('session-a') })
   assert.equal(writes[0].intent.kind, 'replaceIfVersion')
   assert.equal(writes[0].intent.version, 'v7')
+})
+
+// P1-1 回归（issue #3）：自动探测曾在真实环境永不触发——根会话 header 的
+// delegationDepth 是 absent，旧条件 `depth !== 0` 把 undefined 当非零跳过。
+// 下面两条直接驱动捕获到的 agent/created 监听器，锁定真实语义。
+function makeListenerCtx() {
+  let listener
+  const { ctx, writes } = makeCtx({
+    on: (event, fn) => {
+      if (event === 'agent/created') listener = fn
+      return () => {}
+    },
+  })
+  return { ctx, writes, fire: (payload) => listener(payload) }
+}
+
+async function flushAsync() {
+  // writeManifest 内部有多次 await（probe → resolve → stat → writeText），
+  // 用宏任务等它落地。
+  await new Promise((resolve) => setTimeout(resolve, 10))
+}
+
+test('agent/created：根会话（delegationDepth absent）触发自动探测写清单', async () => {
+  const { ctx, writes, fire } = makeListenerCtx()
+  apply(ctx)
+  fire({ agent: agent('session-root') })
+  await flushAsync()
+  assert.equal(writes.length, 1)
+  assert.match(writes[0].content, /# DSH Capabilities/)
+})
+
+test('agent/created：子代理（delegationDepth >= 1）不触发自动探测', async () => {
+  const { ctx, writes, fire } = makeListenerCtx()
+  apply(ctx)
+  fire({ agent: subagentAgent('session-sub') })
+  await flushAsync()
+  assert.equal(writes.length, 0)
 })
