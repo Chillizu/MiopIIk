@@ -1,6 +1,6 @@
 # 通信协议设计
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D5、D7、D9、D10。DSH 通信事实：`send_message` 父→子、`report` 子→父（continuable 子另有面向父的 send_message）、`list_agents`/`interrupt_agent` 归根会话；**无兄弟直连**（无 OMP 式 IRC，树形替代）。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D5、D7、D9、D10。DSH 通信事实：`send_message` 父→子、`report` 子→父（continuable 子另有面向父的 send_message）、`list_agents`/`interrupt_agent` 归根会话；**无兄弟直连**（无 OMP 式 IRC，树形替代）。
 
 ## 1. 拓扑
 

@@ -38,3 +38,4 @@ subagent 的模型必须 ∈ **授权集**（全局默认 ∪ allowlist），否
 
 - kimi 配额耗尽属**运行时额度问题**，不是授权问题：闸挡"未授权拉取"，不治"已授权但没钱"。授权后仍 403 时，错误原样回报（证据），不静默降级。
 - planner 预设 pro 需预置进 allowlist（否则被拦）。
+- **fork/rewind 会逃出闸门**（上游语义边界，issue #3）：`origin: 'subagent'` 只在 child-agent 创建时写入 header；上游 `sessions.fork(source, boundary?)` 的 meta 只传播 `cwd/parentSession/seedLength`，**不传播 origin 与 delegationDepth**。因此 mop_rewind 把一个 subagent 会话 fork 回检查点后，子会话 header 不再带 `origin: 'subagent'`，本闸对它放行（视作主会话）。这是上游 fork 语义的已知边界而非本包 bug：rewind 后的会话继承的是**同源已授权上下文**的延续，风险有限；若上游未来让 fork 传播 origin，本闸无需改动即自动恢复覆盖。

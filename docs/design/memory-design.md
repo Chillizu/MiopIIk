@@ -1,6 +1,6 @@
 # 记忆分级设计
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D12。目标：把 OMP 记忆体系（mnemopi：retain/recall/reflect/memory_edit + learn/manage_skill）按用户分级要求迁移到 DSH，一期零新工具（符合"DSH 哲学就够"）。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D12。目标：把 OMP 记忆体系（mnemopi：retain/recall/reflect/memory_edit + learn/manage_skill）按用户分级要求迁移到 DSH，一期零新工具（符合"DSH 哲学就够"）。
 
 ## 1. 三级记忆
 

@@ -1,6 +1,6 @@
 # 三层 + 监督层架构设计
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D1–D6、D11、D16、D19、D20。蓝本：用户在 OMP PEDA-Review 中已实战原型的三层 subagent 架构 + MioKig 独立验收法 + 用户画像（[user-preference-profile](../profile/user-preference-profile.md)）。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D1–D6、D11、D16、D19、D20。蓝本：用户在 OMP PEDA-Review 中已实战原型的三层 subagent 架构 + MioKig 独立验收法 + 用户画像（[user-preference-profile](../profile/user-preference-profile.md)）。
 
 ## 1. 四角色总表
 

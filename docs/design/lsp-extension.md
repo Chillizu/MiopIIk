@@ -1,6 +1,6 @@
 # 动态 LSP 扩展设计（可选，S9）
 
-> 上一级：[PLAN.md](../../PLAN.md)。对应决策 D23。动机：用户确认"确实可以有动态 LSP"；DSH 已有 lsp seam + stdio provider + `lsp` 工具，但仅 4 个导航操作（definition / references / hover / implementation + applyEdit / didOpen 等），OMP 侧为 14 操作。
+> 上一级：[PLAN.md](../PLAN.md)。对应决策 D23。动机：用户确认"确实可以有动态 LSP"；DSH 已有 lsp seam + stdio provider + `lsp` 工具，但仅 4 个导航操作（definition / references / hover / implementation + applyEdit / didOpen 等），OMP 侧为 14 操作。
 
 ## 1. 现状（本地源码查证）
 
