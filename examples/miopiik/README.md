@@ -13,7 +13,7 @@
 先装 7 个 mop 包（二选一）：
 
 ```bash
-# 推荐：bundle 姿势（自动并入 profile bundles，可被 dsh plugin list/remove 管理）
+# 推荐：bundle 方式（自动并入 profile bundles，可被 dsh plugin list/remove 管理）
 dsh plugin --profile web add \
   link:./packages/mop-tool-recovery \
   link:./packages/mop-executor \
@@ -53,6 +53,6 @@ cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
 ## 与仓库的边界
 
 本示例 + `packages/`（7 插件）+ 主 README 组合起来才是「可重建的 MiOpIIk 插件层」。
-监督/规划/执行层 persona 的**定稿源**在 [`docs/design/presets/drafts/`](../../docs/design/presets/drafts/)
-（其中 `executor.prompt.md` 逐字同步进 `mop-executor`；其余经 persona-sync 测试钉住）。
+监督/规划/执行层 persona 的定稿源在 [`docs/design/presets/drafts/`](../../docs/design/presets/drafts/)
+（`executor.prompt.md` 逐字同步进 `mop-executor`，其余由 persona-sync 测试保持一致）。
 改任一处须同步对应源，否则 `npm test` 的 persona-sync 用例失败。

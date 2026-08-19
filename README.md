@@ -2,16 +2,14 @@
 
 MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
-命名遵循 DSH 约定：包 `@chillizu/mop-<domain>-<feature>`、插件 `name` = `mop-<domain>-<feature>`、模型工具 `mop_<verb>`。其中 `mop` = MiOpIIk 域（对应 DSH 自身的 `dsh-` 前缀），`<verb>` 用下划线小写（对应 DSH 的 `mop_spawn_executor` 式命名）。
+## 范围
 
-## 范围：插件集 ≠ 完整 MiOpIIk profile
+本仓库只包含插件层：7 个 `mop-*` 插件包 + 测试 + 设计文档，不是可直接安装的完整发行包。文档描述的三层 + 监督层系统由两部分组成：
 
-本仓库是 **MiOpIIk 的 DSH 插件集合**，不是可直接安装的完整发行包。文档描述的三层 + 监督层系统由两部分组成：
+- **本仓库（插件层）**：7 个 `mop-*` 插件包 + 测试 + 设计文档。
+- **MiOpIIk agent preset**：persona 与 Cordis 组合行（planner / executor / supervisor 工具编排），位于本机 `${DSH_HOME}/.agent-presets/miopiik/`（`agent.cordis.yml` + `preset.yml`），不在本仓库。脱敏可重建模板见 [`examples/miopiik/`](examples/miopiik/)（无凭据/allowlist/用户路径）；定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（`executor.prompt.md` 逐字同步进 `mop-executor` 的 `EXECUTOR_PERSONA`，其余 persona 由 `persona-sync` 测试与 `examples/miopiik` 副本保持一致）。
 
-- **本仓库（插件集合）**：7 个 `mop-*` 插件包 + 测试 + 设计文档。
-- **MiOpIIk agent preset（完整 profile）**：persona、Cordis 组合行（planner / executor / supervisor 工具编排）——位于本机 `${DSH_HOME}/.agent-presets/miopiik/`（`agent.cordis.yml` + `preset.yml`），**不在本仓库**。脱敏可重建模板见 [`examples/miopiik/`](examples/miopiik/)（无凭据/allowlist/用户路径）。定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（其中 `executor.prompt.md` 逐字同步进 `mop-executor` 的 `EXECUTOR_PERSONA`；review/planner/supervisor 经 `persona-sync` 测试钉住 `examples/miopiik` 副本）。
-
-仅凭本仓库无法重建完整系统：它是「可安装的插件层」，需叠加 preset 才是完整 MiOpIIk。插件层与本机 preset 的关系见[安装](#安装)。DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
+仅凭本仓库无法重建完整系统：它是可安装的插件层，需叠加 preset 才是完整 MiOpIIk。插件层与本机 preset 的关系见[安装](#安装)。DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（7 包）
 
@@ -25,7 +23,7 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 | `@chillizu/mop-learn`          | 学习   | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
 | `@chillizu/mop-run-stats`      | 遥测   | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
 
-## 工具安全行为与限制（本次新增四项）
+## 工具安全行为与限制
 
 - `mop_spawn_executor` `timeoutMs`：可选（毫秒），缺省无超时、行为不变。超时经 AbortController 中止子代理并返回 `[aborted] executor timed out after {N}ms`（末尾仍带 `[executor-session: {id}]`）。限制：仅 per-call 参数，无 Config 级默认；不调用 `run.dispose()`，进程内资源清理仍归 provider/tool 层。
 - `mop_model_revoke`：从全局 allowlist 移除 `provider/model`，与 `mop_model_authorize` 对称；拒绝撤销当前默认模型（隐式授权、不在 allowlist），对不存在项幂等返回。限制：全量重写经进程内 `withAuthLock` 串行化，跨进程并发 revoke+authorize 存在丢行窗口（文档化接受，属低频运维操作）。
@@ -34,7 +32,7 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
 ## 安装
 
-推荐 DSH bundle 姿势（每包已声明 `dsh.bundle.patch`）。在 mop-plugins 仓库根执行：
+推荐用 DSH bundle 方式安装（每包已声明 `dsh.bundle.patch`）。在 mop-plugins 仓库根执行：
 
 ```bash
 dsh plugin --profile web add \
@@ -49,11 +47,11 @@ dsh plugin --profile web add \
 
 `dsh plugin add` 把声明了 `dsh.bundle` 的依赖自动并入 profile 的 `dsh.profile.bundles` 列表；`dsh` 重启后 `standingKeyFor` 挂载验证。
 
-免发布/pnpm 的等价做法：把包放到 `~/.dsh/profiles/mop-*`，在 `~/.dsh/profiles/node_modules/@chillizu/` 建 symlink 指向对应目录（`ln -sfn ~/.dsh/profiles/mop-<feature> ~/.dsh/profiles/node_modules/@chillizu/mop-<feature>`），preset 行写**裸名** `@chillizu/mop-<feature>`——这样 Web UI 插件列表显示的是优雅的包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 愈合 fallback 解析）。两种姿势都可用，bundle 姿势可被 `dsh plugin list/remove` 管理。
+免发布/pnpm 的等价做法：把包放到 `~/.dsh/profiles/mop-*`，在 `~/.dsh/profiles/node_modules/@chillizu/` 建 symlink 指向对应目录（`ln -sfn ~/.dsh/profiles/mop-<feature> ~/.dsh/profiles/node_modules/@chillizu/mop-<feature>`），preset 行写裸包名 `@chillizu/mop-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。两种方式都可用；bundle 方式可被 `dsh plugin list/remove` 管理。
 
 ### 给 Agent 的一键安装提示词
 
-把下面这段原样复制给另一个 Agent（或你自己的新会话），让它按 README 的安装章节执行。这段提示词强制「先授权、再动手、装后验证、失败必报」，不含任何自创命令或隐含权限。
+把下面这段原样复制给另一个 Agent（或你自己的新会话），让它按 README 的安装章节执行。提示词要求它先逐项取得你的确认再动手、装完做只读验证、失败原样上报，不含自创命令。
 
 ```text
 你是安装助手。目标：把公开仓库 Chillizu/mop-plugins（DeepSeek Harness 插件集）安装到用户的 DeepSeek Harness。
@@ -91,7 +89,7 @@ dsh plugin --profile web add \
 
 ## 命名约定
 
-- 包：`@chillizu/mop-<domain>-<feature>`
+- 包：`@chillizu/mop-<domain>-<feature>`（`mop` 是 MiOpIIk 的域前缀，类似 DSH 官方包的 `dsh-`）
 - 插件 `name`：`mop-<domain>-<feature>`（组合行 `id` 与插件 name 一致）
-- 模型工具：`mop_<verb>`（下划线小写，如 `mop_spawn_executor` / `mop_run_stats`）
-- 域缩写：`mop` = MiOpIIk；preset id 用小写 `miopiik`
+- 工具：`mop_<verb>`，下划线小写动词（如 `mop_spawn_executor`、`mop_run_stats`），与 DSH 内置工具（`session_search`、`send_message` 等）的 snake_case 风格一致
+- preset id：小写 `miopiik`
