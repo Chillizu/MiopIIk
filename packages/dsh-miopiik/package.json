@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/Chillizu/mop-plugins#readme",
   "bin": {
-    "dsh-miopiik-init": "./bin/dsh-miopiik-init.mjs"
+    "dsh-miopiik-init": "bin/dsh-miopiik-init.mjs"
   },
   "files": [
     "cordis.patch.yml",
