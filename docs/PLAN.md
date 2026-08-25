@@ -28,7 +28,7 @@
 | D15 | 魔法关键词：hook 检测 **ultrathink / workflowz**（正文散文）注入 notice；**orchestrate** 为规划层 persona 常驻契约段落（非 hook 触发） | [magic-keywords](docs/design/magic-keywords.md) |
 | D16 | 验收纪律：预注册 PASS/KILL/NULL 量化门、契约先行（冻结契约 + golden fixtures）、归因分层 + 复算对账、独立验证 subagent | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D17 | 保留"上游模型当最终裁判"的中介报告模式（审查层产出结构化 md 报告供转交） | [report-template](docs/design/templates/report-template.md) |
-| D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口；**token 出口已落地** `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，逐 turn/step 折叠、replace 不重复计）；墙钟 / 工具计数仍走原生 trajectory | [recovery-toolkit](docs/design/recovery-toolkit.md) |
+| D18 | 补可观测性：agent 墙钟 / token / 工具调用统计（session-telemetry seam 上的 run-stats 插件），回应 DSH-test 评测硬缺口；**token 出口已落地** `dsh-miopiik-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，逐 turn/step 折叠、replace 不重复计）；墙钟 / 工具计数仍走原生 trajectory | [recovery-toolkit](docs/design/recovery-toolkit.md) |
 | D19 | 模型路由（**已确认判别侧 / 成本待复测**，D29→D29v2）：审查/规划强模型、执行/监督廉价模型——D29 弱版 24 run 全门 PASS（H1 flash rewind 0%、H2 0 漏报、H3 0.60×）但弱判别；**D29v2 强版判别力已确认**：加难任务集 + 参考材料埋陷阱 + golden 收紧后，flash 执行层 20 任务真 rewind 0%（与 pro 持平，H1 PASS，执行层判别力不劣于 pro）；但注入缺陷仍零传播 → 监督侧 H2 判 NULL（契约 §3），H3 墙钟代理失真未证实。结论：**执行/监督用廉价模型（flash）成立（判别力充分）；成本侧已拆 H3-latency（墙钟）/H3-cost（token×价）且 token 出口 `mop_run_stats` 已落地，待 D29v3 用 token 复测**。审查层模型 = 用户 GUI 运行时自选（D19 仅建议强模型，非强制） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D20 | 后台任务对齐 DSH jobs（job_list/output/kill + run_in_background）；长任务强制详细日志 + 结束 flag + ETA | [architecture-3-layer](docs/design/architecture-3-layer.md) |
 | D21 | 计划树工作流：大项目先建树（第一层计划 / 第二层文档参考+对话记录简述 / 第三层设计细则），本树即约定实例 | [plan-tree-workflow](docs/design/plan-tree-workflow.md) |
@@ -36,8 +36,8 @@
 | D23 | 动态 LSP（可选 S9）：在 DSH 既有 lsp seam 上扩展操作（一期 diagnostics+rename），按项目语言动态发现 server | [lsp-extension](docs/design/lsp-extension.md) |
 | D24 | 规划层上下文管理：长命会话挂 DSH 自动压缩（阈值触发 + 工具结果剪枝）；规划层可**自主 compact**（状态折叠：写 [EXEC] 汇总 + 项目记忆落盘 → handoff 新会话续跑）；WATCHDOG 式落盘笔记对抗压缩丢失 | [architecture-3-layer](docs/design/architecture-3-layer.md) §7 |
 | D25 | 落地形态（DSH 机制约束）：**单 preset `miopiik` + 两 delegation 工具行（planner/supervisor）+ `mop_spawn_executor` 灵活执行层**；子代理加入父级 preset（无 per-child preset 参数），planner/supervisor 用工具行 config 的 persona 覆盖 + toolFilter；executor 用 mop_spawn_executor（内嵌 persona/toolFilter + 可指定 model） | [architecture-3-layer](docs/design/architecture-3-layer.md) §8 |
-| D26 | 命名约定：MiOpIIk 自建包用 `@chillizu/mop-<domain>-<feature>`（mop = MiOpIIk 域，对应 DSH 的 dsh-）；插件 name = `mop-<domain>-<feature>`；模型工具名 = `mop_<verb>`（下划线）；组合行 id 与插件 name 一致 | 全树适用 |
-| D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`mop-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
+| D26 | 命名约定（2026-08-26 全量改版）：发行名 = `dsh-miopiik-<feature>`（npm 无 scope，与 DSH 官方 `dsh-*` 对齐；7 包 + meta 包）；**模型工具名保持 `mop_<verb>`（下划线）不变**——persona、golden 装置、实验产物零波及，构成「发行名 / 工具名」两级约定。组合行 id 与插件 name 一致（= 包名）。旧名 `@chillizu/mop-<feature>` → `dsh-miopiik-<feature>` 一一对应（历史评审档案 docs/review/* 保留旧名不改，作时点记录） | 全树适用 |
+| D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`dsh-miopiik-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
 | D29 | D19 模型路由实验（类型：实验；状态：已跑；证据：D29 弱版本 24 run + D29v2 强版本 40 执行层/20 监督层 run + 双报告）——对比强/弱执行层模型 rewind 率 + 弱监督层漏报率。D29（弱判别）：24 run 全门 PASS 但 0 rewind + 注入缺陷零传播（弱判别，初步确认）。**D29v2（强版本判别力，判别已确认）**：任务集加难 + 陷阱埋进参考材料 + golden 收紧，flash/pro 执行层 20 任务**真 rewind 均 0%**（20/20 规避参考材料语义陷阱，H1 PASS）；但**传播缺陷仍为 0 → H2 判 NULL**（监督判别无从验证，契约 §3 明示 P=0 时 NULL）；H3 墙钟代理失真未证实（已拆 H3-latency/H3-cost + `mop_run_stats` token 出口，待 D29v3 复测）。raw golden 9 个 FAIL 全为 golden 装置缺陷（env 注入/readdir mock/任务依赖/返回消息断言位置），非模型能力。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
 | D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
@@ -89,32 +89,32 @@
 
 已完成：
 1. **阶段一 preset+协议**：四 prompt 定稿、miopiik 组合、四层端到端跑通（A1–A4/A6 PASS，A5 中间档）✓
-2. **阶段二恢复工具包**（D13/D14）：checkpoint / rewind（fork 无损，含冷会话）/ 规则注入 / 自动重试（原生）/ run-stats（原生 trajectory + `mop_run_stats` 可编程 token 出口）——已固化为 `@chillizu/mop-tool-recovery` 入 miopiik ✓
+2. **阶段二恢复工具包**（D13/D14）：checkpoint / rewind（fork 无损，含冷会话）/ 规则注入 / 自动重试（原生）/ run-stats（原生 trajectory + `mop_run_stats` 可编程 token 出口）——已固化为 `dsh-miopiik-tool-recovery` 入 miopiik ✓
 3. **记忆细化**（D12）：全局记忆 `~/.dsh/memory/global/` + persona 注入 + recall 全文搜索启用（profile patch，重启生效）✓
-4. **魔法关键词 hook**（D15）：`@chillizu/mop-magic-keywords` 入 miopiik，正文检测 ultrathink/workflowz → notice 注入 ✓
-5. **命名约定**（D26）：`@chillizu/mop-<domain>-<feature>` / `mop_<verb>` ✓
-6. **能力探测**（D27）：`@chillizu/mop-capabilities` 探测 seam 可用性 → `.dsh/memory/capabilities.md` ✓
+4. **魔法关键词 hook**（D15）：`dsh-miopiik-magic-keywords` 入 miopiik，正文检测 ultrathink/workflowz → notice 注入 ✓
+5. **命名约定**（D26）：发行名 `dsh-miopiik-<feature>` / 工具名 `mop_<verb>` 两级 ✓
+6. **能力探测**（D27）：`dsh-miopiik-capabilities` 探测 seam 可用性 → `.dsh/memory/capabilities.md` ✓
 7. **审查层监督模型**（D28）：用户即顶层监督者 + 审查层自 checkpoint（写入 persona + architecture §2）✓
 8. **冷会话 rewind 实测**（D13）：真实冷会话 readFrom + create(seed) 跑通（775 事件 → 边界 774 → seed 775 → 子会话）✓
 9. **checkpoint 并发写锁**：CAS（replaceIfVersion）+ 冲突重试，杜绝并发写覆盖 ✓
 10. **recall 全文搜索验证**（D12）：重启 dsh web 后 session_search 实测 2 hits ✓
 11. **模型授权闸**（D30）：subagent 模型 ∈ 授权集（默认 ∪ allowlist），闸在 agent/request 全局 waterfall，28 单测过 ✓
 12. **learn 机制**（D12 落地）：mop_learn 铸 skill 到 .dsh/skills/<name>/SKILL.md，19 单测过 ✓
-13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 mop-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
-14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 mop-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
-15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（mop-executor/magic-keywords/model-auth 三包）；bundle + 真实组合测试已落地 ✓
-16. **生态形态层补全**（DSH 生态契合 60% → 形态层收口）：6 包声明 dsh.bundle patch + cordis.patch.yml（47bc72a）；README 改 bundle 安装方式 + 补 model-auth/learn 两包（8bb1cba）；另 3 包路径提命名常量（6cd20f1）；三档 preset 落地 miopiik-lite（d2c24c2）；**真实组合测试**（56265e8）落地并抓出真 bug——mop-executor `z.number().int()` 真实 schemastery 不存在（mock stub no-op 掩盖），改 `z.natural()`；3 真实组合 + 30 mock 全绿 ✓
-17. **D18 token 出口 + H3 门重冻结**（外部评审 P1-4）：新包 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，live-first + coldSnapshot 兜底，not-found/投影不可用/全零桶三态）；H3 拆 H3-latency/H3-cost + DeepSeek V4 峰谷定价表 + 灰区/INCONCLUSIVE 口径写入 [model-routing-experiment](docs/design/model-routing-experiment.md) §3–§4；真实组合测试锚「tokenUsage 投影零桶」；44 mock + 4 组合全绿 ✓
+13. **D29 模型路由实验**：24 run 完成，H1/H2/H3 门 PASS（弱判别），D19 回写「初步确认」，报告见 [d29-experiment-report](docs/review/d29-experiment-report.md)；顺带修复 dsh-miopiik-executor 两处上游契约漂移（signal/maxDepth——插件首次真实使用暴露，D27 教训升级：seam 探测 ≠ 工具冒烟）✓
+14. **生产清洁度修复**（独立评审 93/78/82）：P0 同步 dsh-miopiik-executor signal/maxDepth 回仓库 + rewind 加 session 归属校验 + 输出截断 4000；P1 提示词层——7 工具 description 按「帮模型做选择」重写 + EXECUTOR_PERSONA 删悬空引用「2.2」+ 消除双真相（description 不写死默认模型）；P2 workflowz notice 文案兜底 + allowlist 缓存提示。30 单测过 ✓
+15. **外部评审反馈收口**（DSH 生态契合 60% → 待机械补）：修 architecture §8 yaml 漂移（三 delegation 行 → 两行 + mop_spawn_executor）+ philosophy-audit §1/§3/§5 滞后（D19/D29 状态、离线降级设计已落）+ 双树（workspace/repo）对齐 + D29 产物 5 文档入库 + 升 D31（33% 漏报水位）；Config schema 已落地（dsh-miopiik-executor/magic-keywords/model-auth 三包）；bundle + 真实组合测试已落地 ✓
+16. **生态形态层补全**（DSH 生态契合 60% → 形态层收口）：6 包声明 dsh.bundle patch + cordis.patch.yml（47bc72a）；README 改 bundle 安装方式 + 补 model-auth/learn 两包（8bb1cba）；另 3 包路径提命名常量（6cd20f1）；三档 preset 落地 miopiik-lite（d2c24c2）；**真实组合测试**（56265e8）落地并抓出真 bug——dsh-miopiik-executor `z.number().int()` 真实 schemastery 不存在（mock stub no-op 掩盖），改 `z.natural()`；3 真实组合 + 30 mock 全绿 ✓
+17. **D18 token 出口 + H3 门重冻结**（外部评审 P1-4）：新包 `dsh-miopiik-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，live-first + coldSnapshot 兜底，not-found/投影不可用/全零桶三态）；H3 拆 H3-latency/H3-cost + DeepSeek V4 峰谷定价表 + 灰区/INCONCLUSIVE 口径写入 [model-routing-experiment](docs/design/model-routing-experiment.md) §3–§4；真实组合测试锚「tokenUsage 投影零桶」；44 mock + 4 组合全绿 ✓
 
 待办（用户门控，需重启/实测）：
 - **D29v2 强版本实验续跑**（类型：已跑；结论：H1 判别力确认 PASS / H2 NULL（传播=0）/ H3 墙钟代理失真未证实；raw golden 9 FAIL 全为 golden 装置缺陷待修）：执行层 40 run（flash+pro 真 rewind 均 0、20/20 规避参考材料陷阱）+ flash 监督层 20 run 完成（全部 PASS）。**遗留**：① 传播缺陷仍 0 → H2 无从判别，需重设缺陷注入口径（已定 D29v3 设计，见下）；② golden 装置需修（env 注入 MOP_MODEL_ALLOWLIST、readdir/listDir mock、任务依赖 t11↔t09、返回消息断言位置，D29v3 阻塞前置）；③ H3 需逐 run 精确墙钟（现已拆 H3-latency/H3-cost，token 走 `mop_run_stats`，见 D18/模型路由实验 §4）。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md)
-- **D29v3 监督层漏报率实验**（类型：Step 1 试跑完成，待 Step 2 跑批 50；P1-5）：根因 = 通道权威性（陷阱必须埋规范性通道 Change/规格正文，非咨询性参考材料）。四口径（A 规格内潜伏陷阱+双层契约 / A2 baseline-planted / B 涌现缺陷 / C 交叉监督）+ D34 红队 benchmark 独立实验；预注册门含 H0 前置（传播 P≥8 可行性 + P_target=20）+ 对照式 KILL（flash>20% 且 pro≤20% 才 KILL）+ H3-latency/cost；fallback 阶梯 A→B→A2→D34 写进契约。**Step 1 试跑（t01/t16 × 2 exec 模型，4 run）装置验证通过**：golden 全 PASS 无 rewind / 谓词 4/4 命中 / 监督 4/4 报出 / 无 divergence。**Step 1 发现 confound → H2 分母口径修正（design §8.5）**：flag-vs-silent 与执行模型强相关（flash 静默采纳 / pro 显式 flag 后采纳），主口径由「静默传播」改「全部传播」（P=命中谓词全部），flag-vs-silent 降为独立报表维度不进分母。**Step 2 前阻塞**：mop-executor 需返回 session id（token 四桶采集，H3-cost；用户已拍板改基建，不动 007a029）。设计见 [d29v3-experiment-design](docs/design/d29v3-experiment-design.md)；试跑记录 `.dsh/d29v3/results/runs.md`（本地 workspace）
+- **D29v3 监督层漏报率实验**（类型：Step 1 试跑完成，待 Step 2 跑批 50；P1-5）：根因 = 通道权威性（陷阱必须埋规范性通道 Change/规格正文，非咨询性参考材料）。四口径（A 规格内潜伏陷阱+双层契约 / A2 baseline-planted / B 涌现缺陷 / C 交叉监督）+ D34 红队 benchmark 独立实验；预注册门含 H0 前置（传播 P≥8 可行性 + P_target=20）+ 对照式 KILL（flash>20% 且 pro≤20% 才 KILL）+ H3-latency/cost；fallback 阶梯 A→B→A2→D34 写进契约。**Step 1 试跑（t01/t16 × 2 exec 模型，4 run）装置验证通过**：golden 全 PASS 无 rewind / 谓词 4/4 命中 / 监督 4/4 报出 / 无 divergence。**Step 1 发现 confound → H2 分母口径修正（design §8.5）**：flag-vs-silent 与执行模型强相关（flash 静默采纳 / pro 显式 flag 后采纳），主口径由「静默传播」改「全部传播」（P=命中谓词全部），flag-vs-silent 降为独立报表维度不进分母。**Step 2 前阻塞**：dsh-miopiik-executor 需返回 session id（token 四桶采集，H3-cost；用户已拍板改基建，不动 007a029）。设计见 [d29v3-experiment-design](docs/design/d29v3-experiment-design.md)；试跑记录 `.dsh/d29v3/results/runs.md`（本地 workspace）
 - **工具面瘦身实验**（D32）：D29 方法跑 {执行 7 工具} vs {收窄}，门 = 首轮通过率 + token。**需 miopiik 会话 + 先冻结任务集/golden**；且 D32 已实测「隐藏 schema 不计入」削弱其省 token 动机，是否值得跑留待你定
 
 ## 6. 维护规则
 
 - 本文件是单源事实；任何设计变更先改本文件对应决策行，再改详情文档；
-- 双树方向：git-tracked 文档（PLAN.md、docs/design、docs/review）以 **repo 为权威**（git 有历史、push 落点），workspace 为镜像 + 本地独有文件（docs/research、docs/profile、.dsh）；改 repo 后立即 cp→workspace，改 packages 后立即 cp→live profiles（`~/.dsh/profiles/mop-*`）；
+- 双树方向：git-tracked 文档（PLAN.md、docs/design、docs/review）以 **repo 为权威**（git 有历史、push 落点），workspace 为镜像 + 本地独有文件（docs/research、docs/profile、.dsh）；改 repo 后立即 cp→workspace，改 packages 后立即 cp→live profiles（`~/.dsh/profiles/dsh-miopiik-*`；旧 `mop-*` 目录用 README「从旧名迁移」步骤清理）；
 - 改决策行时，必须同步该决策承载文档的代码块（如 D25 改动需同步 architecture-3-layer §8 yaml），并在 philosophy-audit §2 登记漂移修复；**机制化**：executor persona 的「定稿源 ↔ 运行时副本」逐字同步由 `test/persona-sync.test.js` 钉死，改一处另一处不同步则测试失败；
 - 会话发现的新偏好/教训 → 更新 [user-preference-profile](docs/profile/user-preference-profile.md)，重要结论升级为 PLAN.md 决策；
 - 所有文档遵循用户风格：直接、简洁、无 Emoji、证据优先。

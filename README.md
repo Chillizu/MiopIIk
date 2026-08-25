@@ -32,7 +32,7 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
 3. 安装后验证（只读，不额外改动）：
    - 核对 7 个包已进入 profile（`dsh plugin list` 或 `dsh.profile.bundles`）；
-   - 重启后确认实际加载：Web UI 设置→插件清单出现 `mop-*`；装了 preset 则用
+   - 重启后确认实际加载：Web UI 设置→插件清单出现 `dsh-miopiik-*`；装了 preset 则用
      `standingKeyFor('miopiik')` 验证挂载；
    - 可选 smoke：按 examples/miopiik/README.md 的「最小 smoke task」跑一遍
      （probe capabilities → checkpoint → list）；
@@ -48,8 +48,8 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
 本仓库包含重建 MiOpIIk 插件层与 preset 的全部材料：
 
-- **插件层**：7 个 `mop-*` 插件包（`packages/`）+ 测试 + 设计文档。
-- **MiOpIIk agent preset**：persona 与 Cordis 组合行（planner / executor / supervisor 工具编排）。脱敏可重建模板在 [`examples/miopiik/`](examples/miopiik/)（复制为 `${DSH_HOME}/.agent-presets/miopiik/` 即可）；定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（`executor.prompt.md` 逐字同步进 `mop-executor` 的 `EXECUTOR_PERSONA`，其余 persona 由 `persona-sync` 测试与 `examples/miopiik` 副本保持一致）。
+- **插件层**：7 个 `dsh-miopiik-*` 插件包（`packages/`）+ 测试 + 设计文档。
+- **MiOpIIk agent preset**：persona 与 Cordis 组合行（planner / executor / supervisor 工具编排）。脱敏可重建模板在 [`examples/miopiik/`](examples/miopiik/)（复制为 `${DSH_HOME}/.agent-presets/miopiik/` 即可）；定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（`executor.prompt.md` 逐字同步进 `dsh-miopiik-executor` 的 `EXECUTOR_PERSONA`，其余 persona 由 `persona-sync` 测试与 `examples/miopiik` 副本保持一致）。
 
 不在库的只有作者私有运行态：API 凭据、模型 allowlist 内容（`~/.dsh/memory/global/model-allowlist.md`）、用户偏好与调研笔记（`docs/profile/`、`docs/research/`）。这是有意的脱敏边界——新部署需自行配置凭据，并用 `mop_model_authorize` 建立自己的 allowlist。
 
@@ -57,15 +57,15 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（7 包）
 
-| 包                             | 类型   | 工具 / 行为                                                                                                                                                                                                                                                                     |
-| ------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@chillizu/mop-tool-recovery`  | 恢复   | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
-| `@chillizu/mop-executor`       | 执行   | `mop_spawn_executor`（一次性执行层子代理，逐次指定 model/provider/`timeoutMs` 硬超时；Config: `provider`/`model`/`maxOutputChars`，默认 flash）                                                                                                                                 |
-| `@chillizu/mop-magic-keywords` | hook   | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
-| `@chillizu/mop-model-auth`     | 授权闸 | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸（Config: `allowlistPath`）                                                                                                                                                                 |
-| `@chillizu/mop-capabilities`   | 探测   | `mop_probe_capabilities`（探测 DSH seam 可用性 → `.dsh/memory/capabilities.md` 能力清单，防上游漂移）                                                                                                                                                                           |
-| `@chillizu/mop-learn`          | 学习   | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
-| `@chillizu/mop-run-stats`      | 遥测   | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
+| 包                           | 类型   | 工具 / 行为                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dsh-miopiik-tool-recovery`  | 恢复   | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
+| `dsh-miopiik-executor`       | 执行   | `mop_spawn_executor`（一次性执行层子代理，逐次指定 model/provider/`timeoutMs` 硬超时；Config: `provider`/`model`/`maxOutputChars`，默认 flash）                                                                                                                                 |
+| `dsh-miopiik-magic-keywords` | hook   | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
+| `dsh-miopiik-model-auth`     | 授权闸 | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸（Config: `allowlistPath`）                                                                                                                                                                 |
+| `dsh-miopiik-capabilities`   | 探测   | `mop_probe_capabilities`（探测 DSH seam 可用性 → `.dsh/memory/capabilities.md` 能力清单，防上游漂移）                                                                                                                                                                           |
+| `dsh-miopiik-learn`          | 学习   | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
+| `dsh-miopiik-run-stats`      | 遥测   | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
 
 ## 工具安全行为与限制
 
@@ -81,18 +81,18 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ```bash
 dsh plugin --profile web add \
-  link:./packages/mop-tool-recovery \
-  link:./packages/mop-executor \
-  link:./packages/mop-magic-keywords \
-  link:./packages/mop-model-auth \
-  link:./packages/mop-capabilities \
-  link:./packages/mop-learn \
-  link:./packages/mop-run-stats
+  link:./packages/dsh-miopiik-tool-recovery \
+  link:./packages/dsh-miopiik-executor \
+  link:./packages/dsh-miopiik-magic-keywords \
+  link:./packages/dsh-miopiik-model-auth \
+  link:./packages/dsh-miopiik-capabilities \
+  link:./packages/dsh-miopiik-learn \
+  link:./packages/dsh-miopiik-run-stats
 ```
 
 `dsh plugin add` 把声明了 `dsh.bundle` 的依赖自动并入 profile 的 `dsh.profile.bundles` 列表；`dsh` 重启后 `standingKeyFor` 挂载验证。
 
-免发布/pnpm 的等价做法：把包放到 `~/.dsh/profiles/mop-*`，在 `~/.dsh/profiles/node_modules/@chillizu/` 建 symlink 指向对应目录（`ln -sfn ~/.dsh/profiles/mop-<feature> ~/.dsh/profiles/node_modules/@chillizu/mop-<feature>`），preset 行写裸包名 `@chillizu/mop-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。两种方式都可用；bundle 方式可被 `dsh plugin list/remove` 管理。
+免发布/pnpm 的等价做法：把包目录放到任意位置（如 `~/.dsh/profiles/dsh-miopiik-*`），在 `~/.dsh/profiles/node_modules/` 下建同名 symlink（`ln -sfn ~/.dsh/profiles/dsh-miopiik-executor ~/.dsh/profiles/node_modules/dsh-miopiik-executor`），preset 行写裸包名 `dsh-miopiik-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。两种方式都可用；bundle 方式可被 `dsh plugin list/remove` 管理。
 
 需要完整四层工作流时，再安装 preset（脱敏模板即本仓库的 `examples/miopiik/`）：
 
@@ -108,7 +108,13 @@ cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
 
 ## 命名约定
 
-- 包：`@chillizu/mop-<domain>-<feature>`（`mop` 是 MiOpIIk 的域前缀，类似 DSH 官方包的 `dsh-`）
-- 插件 `name`：`mop-<domain>-<feature>`（组合行 `id` 与插件 name 一致）
-- 工具：`mop_<verb>`，下划线小写动词（如 `mop_spawn_executor`、`mop_run_stats`），与 DSH 内置工具（`session_search`、`send_message` 等）的 snake_case 风格一致
+- 包 / 插件 name / 组合行 id：`dsh-miopiik-<feature>`（npm 无 scope，与 DSH 官方包的 `dsh-` 风格对齐；2026-08 起由旧名 `@chillizu/mop-<feature>` 全量改名，一一对应）
+- 工具：`mop_<verb>`，下划线小写动词（如 `mop_spawn_executor`、`mop_run_stats`），保持不变——与 DSH 内置工具（`session_search`、`send_message` 等）的 snake_case 风格一致；persona、实验 golden 装置不受改名影响
 - preset id：小写 `miopiik`
+
+### 从旧名迁移（2026-08 前安装的本地环境）
+
+1. 用新包名重装（bundle 方式 `dsh plugin add link:./packages/dsh-miopiik-*`），再 `dsh plugin remove` 旧 `@chillizu/mop-*` 行；
+2. 删除旧 symlink 与空 scope 目录：`rm ~/.dsh/profiles/node_modules/@chillizu/mop-* && rmdir ~/.dsh/profiles/node_modules/@chillizu 2>/dev/null`；
+3. preset（`agent.cordis.yml`）行名同步为新包名（直接重新复制 `examples/miopiik/` 最省事）；
+4. 重启后 `standingKeyFor('miopiik')` 复验。工具名 `mop_*` 未变，会话记忆/checkpoints 文件无需迁移。

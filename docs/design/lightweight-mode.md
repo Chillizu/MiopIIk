@@ -29,7 +29,7 @@
 1. 三档共享同一 persona 段落 + mop 插件；lite 无 subagent 工具行，「派发」路径自然消失（比 prompt 规则硬）= U3 场景级禁停机制化（评测开 lite preset，替代口头「不许 subagent」）。
 2. mop 插件分档友好：tool-recovery/learn/capabilities 薄工具任意档可挂；model-auth 在 lite 无 subagent 可闸、空转无害。插件无需改动。
 3. 升档路径写入审查层 persona：lite 会话发现任务长大（切片 >N / 需并行），提示用户「值得换 miopiik 重开」——人在环路里升档，符合 D28。
-4. 落地现状：`miopiik-lite` 已建（去 delegation 组 + `mop-executor`，保留 recovery/learn/capabilities 薄工具 + magic-keywords/model-auth）；`miopiik` 现状已含 supervisor + model-auth = 即 full 档（讨论里「miopiik = 3 层」是旧认知），故不另建 redundant full 副本；若要「无 supervisor 的中档」，需把现状重命名为 full + 新建中档，留待定。
+4. 落地现状：`miopiik-lite` 已建（去 delegation 组 + `dsh-miopiik-executor`，保留 recovery/learn/capabilities 薄工具 + magic-keywords/model-auth）；`miopiik` 现状已含 supervisor + model-auth = 即 full 档（讨论里「miopiik = 3 层」是旧认知），故不另建 redundant full 副本；若要「无 supervisor 的中档」，需把现状重命名为 full + 新建中档，留待定。
 
 ## 6. 红线（不动）
 

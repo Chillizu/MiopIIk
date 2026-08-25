@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 
 // 维护规则「改决策行必须同步承载文档代码块」的机制化：把四层 persona 的定稿源
 // （docs/design/presets/drafts/*.prompt.md）与运行时副本钉死为逐字同步。
-// executor 副本在 packages/mop-executor/index.js 的 EXECUTOR_PERSONA；
+// executor 副本在 packages/dsh-miopiik-executor/index.js 的 EXECUTOR_PERSONA；
 // review/planner/supervisor 副本在 examples/miopiik/agent.cordis.yml 的 persona 块标量。
 // 一旦有人只改一处，本测试即失败（trust structure, not self-discipline）。
 const here = dirname(fileURLToPath(import.meta.url))
@@ -61,7 +61,7 @@ function extractPersona(yaml, anchor) {
 // ── executor：代码副本 ──
 test('executor persona：定稿源与运行时副本逐字同步', () => {
   const code = readFileSync(
-    join(root, 'packages/mop-executor/index.js'),
+    join(root, 'packages/dsh-miopiik-executor/index.js'),
     'utf8',
   )
   const match = code.match(/const EXECUTOR_PERSONA = `([\s\S]*?)`/)

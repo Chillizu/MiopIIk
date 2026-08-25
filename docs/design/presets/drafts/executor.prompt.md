@@ -1,6 +1,6 @@
 # 执行层（Executor）系统提示
 
-> 同步清单：本文件是执行层 persona 定稿源；运行时副本在 `@chillizu/mop-executor` 的 `EXECUTOR_PERSONA`。改一处须同步另一处。
+> 同步清单：本文件是执行层 persona 定稿源；运行时副本在 `dsh-miopiik-executor` 的 `EXECUTOR_PERSONA`。改一处须同步另一处。
 
 ## 身份
 

@@ -4,7 +4,7 @@
 （`${DSH_HOME}/.agent-presets/miopiik/`）。用途：新机器/新用户可据此重建完整 workflow。
 
 脱敏边界：不包含任何 API key、模型 allowlist 内容、用户偏好或私有路径——mop 行用裸名
-`@chillizu/mop-*`（经 `${DSH_HOME}/profiles/node_modules` 解析，见安装），persona 内
+`dsh-miopiik-*`（经 `${DSH_HOME}/profiles/node_modules` 解析，见安装），persona 内
 引用的是路径（如 `~/.dsh/memory/global/AGENTS.md`），而非其内容。真实凭据、allowlist、
 用户偏好留在本机。
 
@@ -15,19 +15,19 @@
 ```bash
 # 推荐：bundle 方式（自动并入 profile bundles，可被 dsh plugin list/remove 管理）
 dsh plugin --profile web add \
-  link:./packages/mop-tool-recovery \
-  link:./packages/mop-executor \
-  link:./packages/mop-magic-keywords \
-  link:./packages/mop-model-auth \
-  link:./packages/mop-capabilities \
-  link:./packages/mop-learn \
-  link:./packages/mop-run-stats
+  link:./packages/dsh-miopiik-tool-recovery \
+  link:./packages/dsh-miopiik-executor \
+  link:./packages/dsh-miopiik-magic-keywords \
+  link:./packages/dsh-miopiik-model-auth \
+  link:./packages/dsh-miopiik-capabilities \
+  link:./packages/dsh-miopiik-learn \
+  link:./packages/dsh-miopiik-run-stats
 
-# 或：免发布等价做法——把包放到 ${DSH_HOME}/profiles/mop-*，并在
-# ${DSH_HOME}/profiles/node_modules/@chillizu/ 建 symlink（裸名 @chillizu/mop-* 才能解析）：
-#   for p in mop-tool-recovery mop-executor mop-magic-keywords mop-model-auth \
-#            mop-capabilities mop-learn mop-run-stats; do
-#     ln -sfn "${DSH_HOME}/profiles/$p" "${DSH_HOME}/profiles/node_modules/@chillizu/$p"
+# 或：免发布等价做法——把包放到 ${DSH_HOME}/profiles/dsh-miopiik-*，并在
+# ${DSH_HOME}/profiles/node_modules/ 下建同名 symlink（裸名才能解析，无 scope）：
+#   for p in dsh-miopiik-tool-recovery dsh-miopiik-executor dsh-miopiik-magic-keywords dsh-miopiik-model-auth \
+#            dsh-miopiik-capabilities dsh-miopiik-learn dsh-miopiik-run-stats; do
+#     ln -sfn "${DSH_HOME}/profiles/$p" "${DSH_HOME}/profiles/node_modules/$p"
 #   done
 ```
 
@@ -54,5 +54,5 @@ cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
 
 本示例 + `packages/`（7 插件）+ 主 README 组合起来才是「可重建的 MiOpIIk 插件层」。
 监督/规划/执行层 persona 的定稿源在 [`docs/design/presets/drafts/`](../../docs/design/presets/drafts/)
-（`executor.prompt.md` 逐字同步进 `mop-executor`，其余由 persona-sync 测试保持一致）。
+（`executor.prompt.md` 逐字同步进 `dsh-miopiik-executor`，其余由 persona-sync 测试保持一致）。
 改任一处须同步对应源，否则 `npm test` 的 persona-sync 用例失败。

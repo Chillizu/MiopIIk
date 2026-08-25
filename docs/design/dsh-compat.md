@@ -17,13 +17,13 @@
 
 | 包 | inject（硬依赖） | 可选 ctx.get | 事件 |
 |---|---|---|---|
-| mop-tool-recovery | tools, fs, sandboxPolicy, sessions, sessionPersistence | — | agent/disposed |
-| mop-executor | tools, subagents | — | — |
-| mop-magic-keywords | —（纯 hook） | — | agent/pre-step |
-| mop-model-auth | tools | agentDefaultModel | agent/request |
-| mop-capabilities | tools, fs, sessions, sessionPersistence, sessionQuery, systemPrompt, sandboxPolicy | — | agent/created |
-| mop-learn | tools, fs, sandboxPolicy | — | — |
-| mop-run-stats | tools | sessions, sessionProjections, sessionProjectionCache | — |
+| dsh-miopiik-tool-recovery | tools, fs, sandboxPolicy, sessions, sessionPersistence | — | agent/disposed |
+| dsh-miopiik-executor | tools, subagents | — | — |
+| dsh-miopiik-magic-keywords | —（纯 hook） | — | agent/pre-step |
+| dsh-miopiik-model-auth | tools | agentDefaultModel | agent/request |
+| dsh-miopiik-capabilities | tools, fs, sessions, sessionPersistence, sessionQuery, systemPrompt, sandboxPolicy | — | agent/created |
+| dsh-miopiik-learn | tools, fs, sandboxPolicy | — | — |
+| dsh-miopiik-run-stats | tools | sessions, sessionProjections, sessionProjectionCache | — |
 
 seam 联合：`tools / fs / sandboxPolicy / sessions / sessionPersistence / sessionQuery / systemPrompt / subagents`。
 这是 `test/composition/cordis.miopiik-example.yml` 挂载 smoke fixture 所需的最小服务集。

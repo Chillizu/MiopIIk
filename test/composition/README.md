@@ -14,7 +14,7 @@ npm run test:composition
 Requires the DSH harness checkout at `/opt/deepseek-harness` (override with
 `DSH_HARNESS_ROOT=/path/to/harness`). `link-harness.mjs` symlinks the real
 packages into `test/composition/node_modules` (config-dir bare-name resolution)
-and `node_modules/@deepseek-ai` (mop-executor's own imports); the links are
+and `node_modules/@deepseek-ai` (dsh-miopiik-executor's own imports); the links are
 idempotent and gitignored.
 
 ## What it proves
@@ -33,7 +33,7 @@ idempotent and gitignored.
    (npm devDependency v3.18.1), not a stub, so a bogus method like
    `z.number().int()` or `z.string().optional()` throws at import and fails
    `npm test` in CI. This was the `z.number().int()` bug
-   (`packages/mop-executor/index.js:15`, now fixed to `z.natural()`) that the old
+   (`packages/dsh-miopiik-executor/index.js:15`, now fixed to `z.natural()`) that the old
    no-op `test/stubs/schemastery.js` masked. The composition test additionally
    boots every package's `Config` through the **real Loader** (asserting the
    coerced defaults land in `apply(config)`), the last-line contract anchor.

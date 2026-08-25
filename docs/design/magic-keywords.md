@@ -28,7 +28,7 @@
 - 注入：命中的 turn 注入对应 notice 段落（系统提示词 section，order 对齐 preset）；
 - 范围：宿主组合 or preset 级均可；notice 文本从 OMP `*-notice.md` 移植改写（保留规则原文精神）。
 
-**实现（已固化 `@chillizu/mop-magic-keywords`，miopiik preset 行）**：挂 `agent/pre-step` waterfall，正文（去 code fence/inline code）检测 `ultrathink`/`workflowz` → 以 `createUserMessage`（`form: 'notice'`）追加到该 step 消息（DSH 原生 context-message 注入，等价 OMP notice；`orchestrate` 已常驻规划层 persona，无需 hook）。检测为 v1 近似：排除 code fence/inline code + ASCII 词边界（标识符误触发已修：`superultrathink`/`ultrathinking` 不触发，CJK 上下文如 `用ultrathink` 仍触发）；未排除路径（`ultrathink.md` 仍触发，后置细化）。
+**实现（已固化 `dsh-miopiik-magic-keywords`，miopiik preset 行）**：挂 `agent/pre-step` waterfall，正文（去 code fence/inline code）检测 `ultrathink`/`workflowz` → 以 `createUserMessage`（`form: 'notice'`）追加到该 step 消息（DSH 原生 context-message 注入，等价 OMP notice；`orchestrate` 已常驻规划层 persona，无需 hook）。检测为 v1 近似：排除 code fence/inline code + ASCII 词边界（标识符误触发已修：`superultrathink`/`ultrathinking` 不触发，CJK 上下文如 `用ultrathink` 仍触发）；未排除路径（`ultrathink.md` 仍触发，后置细化）。
 
 ## 4. workflowz ↔ DSH workflow 工具对照
 

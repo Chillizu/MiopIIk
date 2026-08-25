@@ -1,0 +1,52 @@
+{
+  "name": "dsh-miopiik-executor",
+  "description": "Controlled one-shot executor subagents with persona, tool allowlist, timeout and cancellation. 受控一次性执行层子代理（persona + 工具白名单 + 超时取消）",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "subagent",
+    "orchestration"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.15"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chillizu/mop-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Chillizu/mop-plugins/issues"
+  },
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-executor#readme"
+}

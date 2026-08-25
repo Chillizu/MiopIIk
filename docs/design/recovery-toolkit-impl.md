@@ -80,7 +80,7 @@
 
 ## 7. P3 与固化结论
 
-- **P3 run-stats（D18）已原生 + 可编程 token 出口落地**：trajectory 视图 `AssistantTimingPanel` 展示 Started / Total duration / TTFT / Generation / Throughput（tok/s）+ outputTokens（无需自建）；**可编程侧**新增 `@chillizu/mop-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，D18 token 出口），供实验门/审查层逐 run 计量 token。轨迹 tab 本身无可扩展子 Slot（按钮落 chat 视图 header/turnTail 是唯一 additive 点）。
+- **P3 run-stats（D18）已原生 + 可编程 token 出口落地**：trajectory 视图 `AssistantTimingPanel` 展示 Started / Total duration / TTFT / Generation / Throughput（tok/s）+ outputTokens（无需自建）；**可编程侧**新增 `dsh-miopiik-run-stats`（`mop_run_stats(sessionId)` 读 `sessionProjections` tokenUsage 累计桶，D18 token 出口），供实验门/审查层逐 run 计量 token。轨迹 tab 本身无可扩展子 Slot（按钮落 chat 视图 header/turnTail 是唯一 additive 点）。
 - **改提示词（defer）**：fork 到「turn 前」需前一个 turn 的 end seq（`owner.turn` 无 prev）；`atSeq = turn.start.seq` 会因"该 turn 未完成"被拒，`start.seq - 1` 有非连续段风险——待实测后再定。
 - **固化路径（待用户 sign-off，因需重启 dsh web）**：
   1. 把恢复插件做成本地 npm 包（host = model 工具 mop_checkpoint/mop_rule_inject/retry_replay + `harness.handle` 四 handler；client = 回溯/重试按钮）；
@@ -94,8 +94,8 @@
 **方向收窄**：UI 按钮方向（`recui-3` 回溯/重试按钮）**已删**——`sessions.fork` 本质 = 新开会话，与现有「分叉会话」同原语，做不出"就地回退"；checkpoint/rewind 归位为**审查层 agent 工具**。
 
 **固化完成（免 pnpm）**：
-- 包：`~/.dsh/profiles/mop-tool-recovery/index.js`（ESM，`import { defineTool } from '@deepseek-ai/dsh-tools'`，靠 `~/.dsh/profiles/node_modules` 愈合 fallback 解析）；
-- 接线：`miopiik/agent.cordis.yml` 尾部 `mop-tool-recovery` 行，`name` 用**绝对路径**（loader 转 file URL）；`standingKeyFor` mounted OK。
+- 包：`~/.dsh/profiles/dsh-miopiik-tool-recovery/index.js`（ESM，`import { defineTool } from '@deepseek-ai/dsh-tools'`，靠 `~/.dsh/profiles/node_modules` 愈合 fallback 解析）；
+- 接线：`miopiik/agent.cordis.yml` 尾部 `dsh-miopiik-tool-recovery` 行，`name` 用**绝对路径**（loader 转 file URL）；`standingKeyFor` mounted OK。
 
 **实测（新会话导出 cb90624f）**：mop_checkpoint / mop_rule_inject / mop_rule_show 全部 [OK]；mop_rewind 首测 3 次 `session not found`（sessionId 未归一化 `session-` 前缀）→ **已修**（自动补/去前缀 + 冷会话提示）。checkpoint @ seq 0 = "派规划层前" fork 到空，语义正确。
 

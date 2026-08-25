@@ -23,7 +23,7 @@ subagent 的模型必须 ∈ **授权集**（全局默认 ∪ allowlist），否
 - allowlist：`~/.dsh/memory/global/model-allowlist.md`，每行 `provider/model`（支持 `#` 注释、`- ` list）。初始预置 `deepseek-official/deepseek-v4-pro`（planner 预设）。
 - 默认模型：`ctx.get('agentDefaultModel').currentSelection()`。
 - 读缓存于内存（首次读 + 授权后刷新），避免每 request 读盘。
-- **可信配置路径**：allowlist 是全局主机级配置（非工作区产物），故 `mop-model-auth` 直接经 `node:fs/promises` 读写、不经 DSH fs/sandboxPolicy seam。这是有意设计，不是 sandbox 绕过；工作区内的写仍受 sandbox 约束。
+- **可信配置路径**：allowlist 是全局主机级配置（非工作区产物），故 `dsh-miopiik-model-auth` 直接经 `node:fs/promises` 读写、不经 DSH fs/sandboxPolicy seam。这是有意设计，不是 sandbox 绕过；工作区内的写仍受 sandbox 约束。
 
 ## 工具
 
@@ -32,7 +32,7 @@ subagent 的模型必须 ∈ **授权集**（全局默认 ∪ allowlist），否
 
 ## 落地（v1）
 
-单包 `@chillizu/mop-model-auth`，inject `tools`。28 单测过（含闸放行/拦截/主会话豁免/授权幂等/列表）。
+单包 `dsh-miopiik-model-auth`，inject `tools`。28 单测过（含闸放行/拦截/主会话豁免/授权幂等/列表）。
 
 ## 边界
 

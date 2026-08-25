@@ -24,6 +24,7 @@
 | U2 | 写「session_search 部署禁用」，实际已启用全文搜索 | 更新为已启用 |
 | 索引表 | recovery-toolkit-impl 与 magic-keywords 两行挤在一行（markdown 断行） | 拆行 |
 | architecture §8 | yaml 代码块仍留 `tool-subagent-executor` delegation 行（D25 已改为 mop_spawn_executor 自定义工具）；且双树（workspace/repo）§1/§8 互相漂移 | 改「三 delegation 行」→「两行 + mop_spawn_executor」，删 executor 行，双树合并对齐 |
+| D26/全树 | 发行名散装双轨：npm scope `@chillizu/mop-*` 与生态惯例 `dsh-*` 不一致，市场/安装面识别成本高；市场还把 MiopIIk 旧仓 7 条散装记录当独立插件 | D26 改版：全量改名 `dsh-miopiik-<feature>`（无 scope），组合行 id/name 同步；工具名 `mop_*` 保持两级约定；历史评审档案保留旧名作时点记录；README 增旧装迁移步骤 |
 
 ## 3. 早前 5 条批评的对照（哪些已补、哪些仍缝）
 

@@ -1,6 +1,6 @@
 # 恢复工具包设计（retry / checkpoint / rewind / 规则注入）
 
-> 状态（2026-08-15）：checkpoint / rewind / 规则注入已落地为 `@chillizu/mop-tool-recovery`；`/retry` 已**弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生。下文保留 retry 的设计记录，但非实现承诺。
+> 状态（2026-08-15）：checkpoint / rewind / 规则注入已落地为 `dsh-miopiik-tool-recovery`；`/retry` 已**弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生。下文保留 retry 的设计记录，但非实现承诺。
 
 > 上一级：[PLAN.md](../PLAN.md)。对应决策 D13、D14、D18。动机：用户确认 DSH 缺重试/checkpoint/回溯；其 OMP 实践（/retry、/omfg→TTSR、plan 重开+规则注入+固化教训）与"像死机"焦虑。
 

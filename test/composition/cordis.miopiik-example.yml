@@ -84,23 +84,23 @@
       allow:
         - read
 
-- id: mop-tool-recovery
-  name: '@chillizu/mop-tool-recovery'
+- id: dsh-miopiik-tool-recovery
+  name: 'dsh-miopiik-tool-recovery'
 
-- id: mop-magic-keywords
-  name: '@chillizu/mop-magic-keywords'
+- id: dsh-miopiik-magic-keywords
+  name: 'dsh-miopiik-magic-keywords'
 
-- id: mop-capabilities
-  name: '@chillizu/mop-capabilities'
+- id: dsh-miopiik-capabilities
+  name: 'dsh-miopiik-capabilities'
 
-- id: mop-executor
-  name: '@chillizu/mop-executor'
+- id: dsh-miopiik-executor
+  name: 'dsh-miopiik-executor'
 
-- id: mop-learn
-  name: '@chillizu/mop-learn'
+- id: dsh-miopiik-learn
+  name: 'dsh-miopiik-learn'
 
-- id: mop-model-auth
-  name: '@chillizu/mop-model-auth'
+- id: dsh-miopiik-model-auth
+  name: 'dsh-miopiik-model-auth'
 
-- id: mop-run-stats
-  name: '@chillizu/mop-run-stats'
+- id: dsh-miopiik-run-stats
+  name: 'dsh-miopiik-run-stats'

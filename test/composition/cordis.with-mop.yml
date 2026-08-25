@@ -22,11 +22,11 @@
 - id: subagent-spawn-in-process
   name: '@deepseek-ai/dsh-subagent-spawn-in-process'
 
-- id: mop-executor
-  name: '@chillizu/mop-executor'
+- id: dsh-miopiik-executor
+  name: 'dsh-miopiik-executor'
 
-- id: mop-magic-keywords
-  name: '@chillizu/mop-magic-keywords'
+- id: dsh-miopiik-magic-keywords
+  name: 'dsh-miopiik-magic-keywords'
 
-- id: mop-model-auth
-  name: '@chillizu/mop-model-auth'
+- id: dsh-miopiik-model-auth
+  name: 'dsh-miopiik-model-auth'

@@ -31,7 +31,7 @@
 
 ## 4. 成本口径与定价表
 
-- **token 出口**：`mop_run_stats(sessionId)`（D18 可编程出口，`@chillizu/mop-run-stats`）返回每 run 累计四桶：uncachedInput / cacheRead / cacheWrite / output。逐 turn/step 折叠，同 step 的 usage 替换不重复计；`tokenUsage` 键缺失 = tokenMeter 未挂载（工具报错），全零桶 = 无 usage 记录（门判 INCONCLUSIVE）。
+- **token 出口**：`mop_run_stats(sessionId)`（D18 可编程出口，`dsh-miopiik-run-stats`）返回每 run 累计四桶：uncachedInput / cacheRead / cacheWrite / output。逐 turn/step 折叠，同 step 的 usage 替换不重复计；`tokenUsage` 键缺失 = tokenMeter 未挂载（工具报错），全零桶 = 无 usage 记录（门判 INCONCLUSIVE）。
 - **定价表**（DeepSeek V4 官方，2026-08-17 生效，峰谷分时，元/百万 tokens）：
 
 | model | tier | 输入命中 | 输入未命中 | 输出 |

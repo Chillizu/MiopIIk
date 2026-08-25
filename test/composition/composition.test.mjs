@@ -71,7 +71,7 @@ test('real spawn driver throws TypeError when a start request lacks signal', asy
 })
 
 test('real Loader coerces all three mop Config schemas into apply(config)', async () => {
-  // Regressions: mop-executor used z.number().int() and mop-model-auth used
+  // Regressions: dsh-miopiik-executor used z.number().int() and dsh-miopiik-model-auth used
   // z.string().optional(), both absent from real schemastery; the mock stub hid
   // them. This boots all three Config-schema packages through the real Loader,
   // so any future bogus schema method fails at boot rather than at a preset
@@ -79,16 +79,18 @@ test('real Loader coerces all three mop Config schemas into apply(config)', asyn
   const ctx2 = await boot('mop-composition', CONFIG_WITH_MOP)
   try {
     const entries = [...ctx2.loader.entries()]
-    const exec = entries.find((entry) => entry.options.id === 'mop-executor')
-    assert.ok(exec, 'mop-executor entry must be mounted and active')
+    const exec = entries.find(
+      (entry) => entry.options.id === 'dsh-miopiik-executor',
+    )
+    assert.ok(exec, 'dsh-miopiik-executor entry must be mounted and active')
     assert.equal(exec.fiber.config.maxOutputChars, 4000)
     assert.equal(exec.fiber.config.provider, 'deepseek-official')
     assert.equal(exec.fiber.config.model, 'deepseek-v4-flash')
 
     const kw = entries.find(
-      (entry) => entry.options.id === 'mop-magic-keywords',
+      (entry) => entry.options.id === 'dsh-miopiik-magic-keywords',
     )
-    assert.ok(kw, 'mop-magic-keywords entry must be mounted and active')
+    assert.ok(kw, 'dsh-miopiik-magic-keywords entry must be mounted and active')
     assert.ok(
       kw.fiber.config.notices.ultrathink,
       'notices.ultrathink default must be present',
@@ -98,8 +100,10 @@ test('real Loader coerces all three mop Config schemas into apply(config)', asyn
       'notices.workflowz default must be present',
     )
 
-    const auth = entries.find((entry) => entry.options.id === 'mop-model-auth')
-    assert.ok(auth, 'mop-model-auth entry must be mounted and active')
+    const auth = entries.find(
+      (entry) => entry.options.id === 'dsh-miopiik-model-auth',
+    )
+    assert.ok(auth, 'dsh-miopiik-model-auth entry must be mounted and active')
     // allowlistPath is optional (no .default), so the Loader leaves it undefined.
     assert.equal(auth.fiber.config.allowlistPath, undefined)
   } finally {
@@ -108,15 +112,17 @@ test('real Loader coerces all three mop Config schemas into apply(config)', asyn
 })
 
 test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
-  // 契约锚：mop-run-stats 依赖「tokenMeter 挂载后 tokenUsage 投影恒存在（零桶），
+  // 契约锚：dsh-miopiik-run-stats 依赖「tokenMeter 挂载后 tokenUsage 投影恒存在（零桶），
   // undefined 只 = tokenMeter 未挂载」。此处用真实 token-meter + session-projection
-  // 证明 Config z.object({}) 过真实 Loader、mop-run-stats 硬 inject tools、
+  // 证明 Config z.object({}) 过真实 Loader、dsh-miopiik-run-stats 硬 inject tools、
   // 且空 session 的 snapshot 里 tokenUsage 键确实注册为零桶（非 undefined）。
   const ctx3 = await boot('mop-composition', CONFIG_WITH_RUN_STATS)
   try {
     const entries = [...ctx3.loader.entries()]
-    const rs = entries.find((entry) => entry.options.id === 'mop-run-stats')
-    assert.ok(rs, 'mop-run-stats entry must be mounted and active')
+    const rs = entries.find(
+      (entry) => entry.options.id === 'dsh-miopiik-run-stats',
+    )
+    assert.ok(rs, 'dsh-miopiik-run-stats entry must be mounted and active')
     assert.deepEqual(
       rs.fiber.config,
       {},
@@ -144,13 +150,13 @@ test('MiOpIIk 层挂载 smoke：7 mop + planner/supervisor delegation 经真实 
   try {
     const entries = [...ctx4.loader.entries()]
     for (const id of [
-      'mop-tool-recovery',
-      'mop-magic-keywords',
-      'mop-capabilities',
-      'mop-executor',
-      'mop-learn',
-      'mop-model-auth',
-      'mop-run-stats',
+      'dsh-miopiik-tool-recovery',
+      'dsh-miopiik-magic-keywords',
+      'dsh-miopiik-capabilities',
+      'dsh-miopiik-executor',
+      'dsh-miopiik-learn',
+      'dsh-miopiik-model-auth',
+      'dsh-miopiik-run-stats',
       'tool-subagent-planner',
       'tool-subagent-supervisor',
     ]) {

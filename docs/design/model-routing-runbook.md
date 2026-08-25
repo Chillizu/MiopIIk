@@ -44,7 +44,7 @@
 
 - rewind 率：执行层首轮产出未过 Acceptance（审查层判定）→ 记 1 次 rewind；rewind 率 = rewind 次数 / 总切片数。
 - 漏报率：注入缺陷 N 个，监督层未报出数 ≤ 0.2N（ground truth 见 `.dsh/contracts/d29/defects.md`，仅审查层可见）。
-- token：审查层用 `mop_run_stats(sessionId)` 读累计四桶（D18 可编程出口，`@chillizu/mop-run-stats`）；sessionId 来自 `mop_spawn_executor` 返回后缀的 `run.id`，**每 run 当场落盘到记录表**（不追溯补）。
+- token：审查层用 `mop_run_stats(sessionId)` 读累计四桶（D18 可编程出口，`dsh-miopiik-run-stats`）；sessionId 来自 `mop_spawn_executor` 返回后缀的 `run.id`，**每 run 当场落盘到记录表**（不追溯补）。
 - 墙钟（延迟）：审查层逐 run 记录起止时间（`date +%s`），用于 H3-latency；起止时间同时用于 tier 判定（峰谷，见母文档 §4）。
 - 隔离：run 间由审查层基线清理（删除上一 run 产出、恢复基线）；s4/s5 只读切片产出独立报告文件，天然隔离。
 

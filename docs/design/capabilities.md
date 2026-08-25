@@ -4,7 +4,7 @@
 
 ## 1. 探测模块
 
-`@chillizu/mop-capabilities`：
+`dsh-miopiik-capabilities`：
 
 - 挂 `agent/created`（根会话 depth 0）自动探测一次 + 工具 `mop_probe_capabilities` 按需重探；
 - 探测 seam：`sessions.list/fork`、`sessionPersistence.listSnapshots/readFrom`、`sessionQuery.searchSessions`、`systemPrompt.section`、`sandboxPolicy.resolve`；
