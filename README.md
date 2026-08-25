@@ -18,16 +18,19 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
    不重启服务：
    - 是否授权安装本插件集（是/否）？
    - 目标 Harness 是哪个（web / headless / 其它）？对应 profile 名是什么？
-   - 把本仓库 clone/checkout 到哪个目录？该目录是否已存在？
+   - 安装来源：npm 套件包（推荐，无需 clone）还是源码？源码安装时 clone/checkout
+     到哪个目录？该目录是否已存在？
    - 是否允许修改 profile 配置（`dsh plugin add` 会写 profile）？
    - 是否同时安装 miopiik preset（复制 examples/miopiik 为
      ${DSH_HOME}/.agent-presets/miopiik）？完整四层工作流需要它；只装插件层可跳过。
    - 是否允许重启 Harness 服务以加载插件与 preset？
 
-2. 确认完成后，按 README「安装」章节用
-   `dsh plugin --profile <profile> add link:./packages/...` 逐个安装 7 个包；
-   若用户同意了 preset，再执行
-   `cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"`。
+2. 确认完成后，按 README「安装」章节执行，优先方式一（套件包）：
+   `dsh plugin --profile <profile> add dsh-miopiik` 装插件层 +
+   `npx dsh-miopiik-init` 装 preset（用户未同意 preset 则跳过此步）。
+   仅当用户明确选择源码安装时，才 clone 仓库并改用
+   `dsh plugin --profile <profile> add link:./packages/...` 逐个装 7 个包、
+   再 `cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"`。
    不跳过、不自造参数、不改动包内文件。
 
 3. 安装后验证（只读，不额外改动）：
@@ -77,9 +80,47 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 安装
 
-推荐用 DSH bundle 方式安装（每包已声明 `dsh.bundle.patch`）。在 mop-plugins 仓库根执行：
+三级路径，按需选择其一；**同一 profile 内勿混用**（尤其勿把套件包与逐包安装叠加，重复插入同名行属于未定义组合）。
+
+### 方式一（推荐）：套件包一条命令
 
 ```bash
+# 插件层：一条命令装入全部 7 个插件（自动并入 profile bundles）
+dsh plugin --profile web add dsh-miopiik
+
+# preset 层（完整四层工作流需要）：初始化 miopiik preset 到 ${DSH_HOME}/.agent-presets/miopiik
+npx dsh-miopiik-init          # 目标已存在则拒绝覆盖；--force 覆盖
+```
+
+`dsh plugin add` 会把声明了 `dsh.bundle.patch` 的包并入 profile 的 bundles 列表并自动解析依赖；重启后 `standingKeyFor` 挂载验证。
+
+### 方式二：逐包安装（按需取用）
+
+每包已声明 `dsh.bundle.patch`，npm 名即包名：
+
+```bash
+dsh plugin --profile web add \
+  dsh-miopiik-tool-recovery \
+  dsh-miopiik-executor \
+  dsh-miopiik-magic-keywords \
+  dsh-miopiik-model-auth \
+  dsh-miopiik-capabilities \
+  dsh-miopiik-learn \
+  dsh-miopiik-run-stats
+```
+
+需要完整四层工作流时再装 preset（脱敏模板在本仓库 `examples/miopiik/`）：
+
+```bash
+cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
+```
+
+重启后 `standingKeyFor('miopiik')` 验证挂载；smoke 步骤见 [`examples/miopiik/README.md`](examples/miopiik/README.md)。
+
+### 方式三：源码 clone/link（开发者）
+
+```bash
+git clone https://github.com/Chillizu/mop-plugins && cd mop-plugins
 dsh plugin --profile web add \
   link:./packages/dsh-miopiik-tool-recovery \
   link:./packages/dsh-miopiik-executor \
@@ -90,17 +131,14 @@ dsh plugin --profile web add \
   link:./packages/dsh-miopiik-run-stats
 ```
 
-`dsh plugin add` 把声明了 `dsh.bundle` 的依赖自动并入 profile 的 `dsh.profile.bundles` 列表；`dsh` 重启后 `standingKeyFor` 挂载验证。
+免发布/pnpm 的等价做法：把包目录放到任意位置（如 `~/.dsh/profiles/dsh-miopiik-*`），在 `~/.dsh/profiles/node_modules/` 下建同名 symlink（`ln -sfn ~/.dsh/profiles/dsh-miopiik-executor ~/.dsh/profiles/node_modules/dsh-miopiik-executor`），preset 行写裸包名 `dsh-miopiik-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。bundle 方式可被 `dsh plugin list/remove` 管理。
 
-免发布/pnpm 的等价做法：把包目录放到任意位置（如 `~/.dsh/profiles/dsh-miopiik-*`），在 `~/.dsh/profiles/node_modules/` 下建同名 symlink（`ln -sfn ~/.dsh/profiles/dsh-miopiik-executor ~/.dsh/profiles/node_modules/dsh-miopiik-executor`），preset 行写裸包名 `dsh-miopiik-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。两种方式都可用；bundle 方式可被 `dsh plugin list/remove` 管理。
+### 从旧名迁移（2026-08 前安装的本地环境）
 
-需要完整四层工作流时，再安装 preset（脱敏模板即本仓库的 `examples/miopiik/`）：
-
-```bash
-cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
-```
-
-重启后 `standingKeyFor('miopiik')` 验证挂载；smoke 验证步骤见 [`examples/miopiik/README.md`](examples/miopiik/README.md)。
+1. 用新包名重装（方式一/二/三任一），再 `dsh plugin remove` 掉旧 `@chillizu/mop-*` 行；
+2. 删除旧 symlink 与空 scope 目录：`rm ~/.dsh/profiles/node_modules/@chillizu/mop-* && rmdir ~/.dsh/profiles/node_modules/@chillizu 2>/dev/null`；
+3. preset 行名同步为新包名（重新执行 `cp -r examples/miopiik ...` 最省事）；
+4. 重启后 `standingKeyFor('miopiik')` 复验。工具名 `mop_*` 未变，会话记忆/checkpoints 文件无需迁移。
 
 ## 设计（计划树）
 
@@ -111,10 +149,3 @@ cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"
 - 包 / 插件 name / 组合行 id：`dsh-miopiik-<feature>`（npm 无 scope，与 DSH 官方包的 `dsh-` 风格对齐；2026-08 起由旧名 `@chillizu/mop-<feature>` 全量改名，一一对应）
 - 工具：`mop_<verb>`，下划线小写动词（如 `mop_spawn_executor`、`mop_run_stats`），保持不变——与 DSH 内置工具（`session_search`、`send_message` 等）的 snake_case 风格一致；persona、实验 golden 装置不受改名影响
 - preset id：小写 `miopiik`
-
-### 从旧名迁移（2026-08 前安装的本地环境）
-
-1. 用新包名重装（bundle 方式 `dsh plugin add link:./packages/dsh-miopiik-*`），再 `dsh plugin remove` 旧 `@chillizu/mop-*` 行；
-2. 删除旧 symlink 与空 scope 目录：`rm ~/.dsh/profiles/node_modules/@chillizu/mop-* && rmdir ~/.dsh/profiles/node_modules/@chillizu 2>/dev/null`；
-3. preset（`agent.cordis.yml`）行名同步为新包名（直接重新复制 `examples/miopiik/` 最省事）；
-4. 重启后 `standingKeyFor('miopiik')` 复验。工具名 `mop_*` 未变，会话记忆/checkpoints 文件无需迁移。

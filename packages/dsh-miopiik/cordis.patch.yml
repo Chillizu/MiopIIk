@@ -1,0 +1,18 @@
+# MiOpIIk 套件聚合 patch：一条 `dsh plugin add dsh-miopiik` 插入全部 7 行。
+# 注意：勿与逐包安装（单独 add dsh-miopiik-*）混用同一 profile——重复 insert
+# 同名行属于未定义组合，二选一。
+- insert:
+    - id: dsh-miopiik-tool-recovery
+      name: dsh-miopiik-tool-recovery
+    - id: dsh-miopiik-executor
+      name: dsh-miopiik-executor
+    - id: dsh-miopiik-magic-keywords
+      name: dsh-miopiik-magic-keywords
+    - id: dsh-miopiik-model-auth
+      name: dsh-miopiik-model-auth
+    - id: dsh-miopiik-capabilities
+      name: dsh-miopiik-capabilities
+    - id: dsh-miopiik-learn
+      name: dsh-miopiik-learn
+    - id: dsh-miopiik-run-stats
+      name: dsh-miopiik-run-stats

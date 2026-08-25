@@ -1,0 +1,54 @@
+{
+  "name": "dsh-miopiik",
+  "description": "MiOpIIk plugin suite for DeepSeek Harness: one-command install of all seven plugins plus the miopiik four-layer workflow preset initializer. MiOpIIk 套件包：一条命令装齐 7 插件并初始化四层工作流 preset",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.15"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "agent-workflow",
+    "subagents",
+    "checkpoint",
+    "miopiik"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chillizu/mop-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Chillizu/mop-plugins/issues"
+  },
+  "homepage": "https://github.com/Chillizu/mop-plugins#readme",
+  "bin": {
+    "dsh-miopiik-init": "./bin/dsh-miopiik-init.mjs"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "bin/",
+    "preset/"
+  ],
+  "exports": {
+    ".": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "dsh-miopiik-capabilities": "^0.1.0",
+    "dsh-miopiik-executor": "^0.1.0",
+    "dsh-miopiik-learn": "^0.1.0",
+    "dsh-miopiik-magic-keywords": "^0.1.0",
+    "dsh-miopiik-model-auth": "^0.1.0",
+    "dsh-miopiik-run-stats": "^0.1.0",
+    "dsh-miopiik-tool-recovery": "^0.1.0"
+  }
+}

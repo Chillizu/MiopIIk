@@ -1,0 +1,78 @@
+name: Release
+
+# push tag v* → 校验 lockstep 版本与 tag 一致 → npm 发布（先 7 子包、最后 meta 包）
+# + GitHub Release 草稿。
+#
+# 版本策略（CONTRIBUTING「版本策略」）：7 个插件包 + 套件包 dsh-miopiik 采用
+# lockstep——发版前在本地把全部 workspace 的 version 改成同一号并提交，再打 tag：
+#   npm version <x.y.z> --workspaces && git push --follow-tags
+#
+# 首发约定（2026-08）：首版由维护者本机手动 `npm login && npm publish`；
+# 配好 NPM_TOKEN secret 后本通道自动生效（未配 token 时发布步骤跳过，只出 Release 草稿）。
+# meta 包依赖子包用 ^range，lockstep 下无需逐包改依赖版本；发布顺序保证子包先存在。
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Gates (check/lint/format/crossrefs/test)
+        run: |
+          npm run check
+          npm run lint
+          npm run format:check
+          bash tools/verify-crossrefs.sh
+          npm test
+
+      - name: Verify lockstep versions match the tag
+        run: |
+          WANT="${GITHUB_REF_NAME#v}"
+          export WANT
+          node -e '
+            const fs = require("fs");
+            const bad = fs.readdirSync("packages")
+              .map((p) => "packages/" + p)
+              .filter((dir) => {
+                const pkg = JSON.parse(fs.readFileSync(dir + "/package.json", "utf8"));
+                return pkg.version !== process.env.WANT;
+              });
+            if (bad.length) {
+              console.error("version mismatch (want " + process.env.WANT + "): " + bad.join(", "));
+              process.exit(1);
+            }
+            console.log("all workspaces at " + process.env.WANT);
+          '
+
+      - name: Publish seven plugins, then the meta package
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for p in dsh-miopiik-tool-recovery dsh-miopiik-executor \
+                   dsh-miopiik-magic-keywords dsh-miopiik-model-auth \
+                   dsh-miopiik-capabilities dsh-miopiik-learn \
+                   dsh-miopiik-run-stats; do
+            npm publish --workspace "packages/$p" || \
+              { echo "publish failed: $p (already exists?)"; exit 1; }
+          done
+          npm publish --workspace packages/dsh-miopiik
+
+      - name: Draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
