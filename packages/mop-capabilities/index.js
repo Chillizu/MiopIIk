@@ -19,59 +19,147 @@ const stringOutput = {
 // 能力清单落点（D27，docs/design/capabilities.md）：项目 .dsh/memory/capabilities.md。
 const CAPABILITIES_REL_PATH = '.dsh/memory/capabilities.md'
 
-/** 探测一个 seam；结果条目：{ seam, ok, detail }。 */
+function msgOf(error) {
+  return error && error.code
+    ? String(error.code)
+    : error && error.message
+      ? error.message
+      : String(error)
+}
+
+// list()/listSnapshots() 条目可能是字符串或带 id/sessionId 的对象（上游形状未
+// 稳定，探测端必须容忍两种）；提取不出就跳过实调而非误报失败。
+function idOf(entry) {
+  if (typeof entry === 'string') return entry
+  if (entry && typeof entry === 'object') {
+    if (typeof entry.id === 'string') return entry.id
+    if (typeof entry.sessionId === 'string') return entry.sessionId
+  }
+  return null
+}
+
+/**
+ * 探测 DSH seam。条目：{ seam, present, invoked, ok, detail }。
+ * 两列语义（D27 教训升级「seam 探测 ≠ 工具冒烟」）：present = 原语在场
+ * （typeof 检查）；invoked = 非破坏性实调结果（'ok' | 'fail'）；null = 只查
+ * 在场（实调有副作用或需会话上下文）。在场 ≠ 可用，manifest 如实分列。
+ */
 async function probe(ctx) {
   const results = []
-
-  const present = (seam, fn) =>
-    results.push({
-      seam,
-      ok: typeof fn === 'function',
-      detail: typeof fn === 'function' ? 'primitive present' : 'missing',
-    })
-
-  present('sessions.list', ctx.sessions && ctx.sessions.list)
-  present('sessions.fork', ctx.sessions && ctx.sessions.fork)
-  present(
-    'sessionPersistence.readFrom',
-    ctx.sessionPersistence && ctx.sessionPersistence.readFrom,
-  )
-  present('systemPrompt.section', ctx.systemPrompt && ctx.systemPrompt.section)
-  present(
-    'sandboxPolicy.resolve',
-    ctx.sandboxPolicy && ctx.sandboxPolicy.resolve,
-  )
-
-  try {
-    const snapshots = await ctx.sessionPersistence.listSnapshots()
-    results.push({
-      seam: 'sessionPersistence.listSnapshots',
-      ok: true,
-      detail: `${snapshots.length} snapshots`,
-    })
-  } catch (e) {
-    results.push({
-      seam: 'sessionPersistence.listSnapshots',
-      ok: false,
-      detail: e && e.message ? e.message : String(e),
-    })
+  const row = (seam) => {
+    const r = { seam, present: false, invoked: null, ok: false, detail: 'missing' }
+    results.push(r)
+    return r
+  }
+  const presenceOnly = (seam, fn, why) => {
+    const r = row(seam)
+    r.present = typeof fn === 'function'
+    r.ok = r.present
+    r.detail = r.present ? `primitive present (not invoked: ${why})` : 'missing'
   }
 
-  try {
-    const page = await ctx.sessionQuery.searchSessions({
-      query: 'capability-probe',
-    })
-    results.push({
-      seam: 'sessionQuery.searchSessions',
-      ok: true,
-      detail: `${page.items.length} hits`,
-    })
-  } catch (e) {
-    results.push({
-      seam: 'sessionQuery.searchSessions',
-      ok: false,
-      detail: e && e.code ? e.code : e && e.message ? e.message : String(e),
-    })
+  // ── sessions.list：非破坏性实调（枚举 live 会话）──
+  let readTarget = null
+  {
+    const r = row('sessions.list')
+    const fn = ctx.sessions && ctx.sessions.list
+    r.present = typeof fn === 'function'
+    if (r.present) {
+      try {
+        const listed = await fn.call(ctx.sessions)
+        const items = Array.isArray(listed) ? listed : []
+        r.invoked = 'ok'
+        r.ok = true
+        r.detail = `${items.length} live sessions`
+        readTarget = idOf(items[0])
+      } catch (error) {
+        r.invoked = 'fail'
+        r.detail = msgOf(error)
+      }
+    }
+  }
+
+  // ── sessions.fork：只查在场——fork 会创建真实子会话，不做非破坏实调 ──
+  presenceOnly(
+    'sessions.fork',
+    ctx.sessions && ctx.sessions.fork,
+    'fork creates a real session',
+  )
+
+  // ── sessionPersistence.listSnapshots：非破坏性实调，并为 readFrom 探测目标 ──
+  let snapshotTarget = null
+  {
+    const r = row('sessionPersistence.listSnapshots')
+    const fn = ctx.sessionPersistence && ctx.sessionPersistence.listSnapshots
+    r.present = typeof fn === 'function'
+    if (r.present) {
+      try {
+        const snapshots = await fn.call(ctx.sessionPersistence)
+        const items = Array.isArray(snapshots) ? snapshots : []
+        r.invoked = 'ok'
+        r.ok = true
+        r.detail = `${items.length} snapshots`
+        snapshotTarget = idOf(items[0])
+      } catch (error) {
+        r.invoked = 'fail'
+        r.detail = msgOf(error)
+      }
+    }
+  }
+
+  {
+    const r = row('sessionPersistence.readFrom')
+    const fn = ctx.sessionPersistence && ctx.sessionPersistence.readFrom
+    r.present = typeof fn === 'function'
+    const target = readTarget ?? snapshotTarget
+    if (r.present && target !== null) {
+      try {
+        await fn.call(ctx.sessionPersistence, target, 0)
+        r.invoked = 'ok'
+        r.ok = true
+        r.detail = `readFrom(${target}, 0) ok`
+      } catch (error) {
+        r.invoked = 'fail'
+        r.detail = msgOf(error)
+      }
+    } else if (r.present) {
+      r.ok = true
+      r.detail =
+        'primitive present (not invoked: no live session/snapshot to read)'
+    }
+  }
+
+  // ── systemPrompt.section / sandboxPolicy.resolve：只查在场（前者需会话级
+  // prompt 上下文，后者需真实 session 才有意义）──
+  presenceOnly(
+    'systemPrompt.section',
+    ctx.systemPrompt && ctx.systemPrompt.section,
+    'needs a session-scoped prompt',
+  )
+  presenceOnly(
+    'sandboxPolicy.resolve',
+    ctx.sandboxPolicy && ctx.sandboxPolicy.resolve,
+    'needs a real session',
+  )
+
+  // ── sessionQuery.searchSessions：非破坏性实调（既有行为，补在场检查）──
+  {
+    const r = row('sessionQuery.searchSessions')
+    const fn = ctx.sessionQuery && ctx.sessionQuery.searchSessions
+    r.present = typeof fn === 'function'
+    if (r.present) {
+      try {
+        const page = await fn.call(ctx.sessionQuery, {
+          query: 'capability-probe',
+        })
+        r.invoked = 'ok'
+        r.ok = true
+        r.detail = `${page.items.length} hits`
+      } catch (error) {
+        r.invoked = 'fail'
+        r.detail = msgOf(error)
+      }
+    }
   }
 
   return results
@@ -84,24 +172,40 @@ function escapeCell(value) {
     .replace(/\|/g, '\\|')
 }
 
+// 运行环境行：node 版本 + 平台 + 可获取时的 harness 根目录（组合测试/部署注入
+// DSH_HARNESS_ROOT；普通运行可能未设，如实标 unknown）。
+function harnessInfo() {
+  const root =
+    typeof process !== 'undefined' && process.env
+      ? process.env.DSH_HARNESS_ROOT
+      : undefined
+  return `node ${(process && process.version) || 'unknown'} | ${
+    (process && process.platform) || 'unknown'
+  } | harness root: ${root || 'unknown'}`
+}
+
 function renderManifest(results, cwd) {
   const degraded = results.filter((r) => !r.ok).length
   const status = degraded === 0 ? 'OK' : 'DEGRADED'
   const rows = results
     .map(
       (r) =>
-        `| \`${r.seam}\` | ${r.ok ? '[OK]' : '[DEGRADED]'} | ${escapeCell(r.detail)} |`,
+        `| \`${r.seam}\` | ${r.present ? '[是]' : '[否]'} | ${
+          r.invoked === 'ok' ? '[ok]' : r.invoked === 'fail' ? '[fail]' : '—'
+        } | ${escapeCell(r.detail)} |`,
     )
     .join('\n')
   return `# DSH Capabilities（能力清单）
 
 > 探测时间：${new Date().toISOString()} | status：${status} | cwd：${cwd} | 由 \`@chillizu/mop-capabilities\` 生成。
+> 运行环境：${harnessInfo()}
 > 读此文件了解当前部署 seam 可用性；**勿凭记忆假设上游契约**（DSH 尚在 rc，seam 语义可能流动）。
+> 两列语义：「在场」= 原语存在（typeof 检查）；「实调」= 非破坏性实调结果，「—」= 未实调（有副作用或需会话上下文）。**在场 ≠ 可用**。
 
 ## 探测结果
 
-| seam | 状态 | 详情 |
-|---|---|---|
+| seam | 在场 | 实调 | 详情 |
+|---|---|---|---|
 ${rows}
 `
 }
@@ -157,7 +261,7 @@ export function apply(ctx) {
     defineTool({
       name: 'mop_probe_capabilities',
       description:
-        'Probe DSH seam availability and write the capability manifest (with status OK/DEGRADED) to .dsh/memory/capabilities.md. Call at session start to detect upstream drift instead of assuming contracts from memory; the startup auto-probe is best-effort (async), so call this explicitly to guarantee the manifest is fresh before work.',
+        'Probe DSH seam availability and write the capability manifest to .dsh/memory/capabilities.md. Each seam reports two evidence levels: present (primitive exists) and invoked-ok (non-destructive real call succeeded; "—" means not invoked because the call has side effects or needs a session context). Overall status OK/DEGRADED plus node/platform/harness-root info are recorded. Call at session start to detect upstream drift instead of assuming contracts from memory; the startup auto-probe is best-effort (async), so call this explicitly to guarantee the manifest is fresh before work.',
       parameters: {},
       output: stringOutput,
       async execute(_args, exec) {
