@@ -396,8 +396,14 @@ test('fiber teardown disposes every remaining rule section (plugin stop/update)'
   for (const disposer of teardowns) disposer()
 
   assert.deepEqual(disposed.sort(), ['session-a', 'session-b'])
-  assert.equal(show.execute({}, { agent: agent('session-a') }), '(no rule injected)')
-  assert.equal(show.execute({}, { agent: agent('session-b') }), '(no rule injected)')
+  assert.equal(
+    show.execute({}, { agent: agent('session-a') }),
+    '(no rule injected)',
+  )
+  assert.equal(
+    show.execute({}, { agent: agent('session-b') }),
+    '(no rule injected)',
+  )
 
   // 幂等：二次 teardown 不抛错。
   for (const disposer of teardowns) disposer()

@@ -47,7 +47,13 @@ function idOf(entry) {
 async function probe(ctx) {
   const results = []
   const row = (seam) => {
-    const r = { seam, present: false, invoked: null, ok: false, detail: 'missing' }
+    const r = {
+      seam,
+      present: false,
+      invoked: null,
+      ok: false,
+      detail: 'missing',
+    }
     results.push(r)
     return r
   }

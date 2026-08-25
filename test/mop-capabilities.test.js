@@ -96,7 +96,10 @@ test('manifest records two evidence levels plus harness environment', async () =
   assert.match(content, /\| seam \| 在场 \| 实调 \| 详情 \|/)
   assert.match(content, /在场 ≠ 可用/)
   // sessions.list 非破坏实调成功（mock 返回空数组 → 0 live sessions）。
-  assert.match(content, /sessions\.list` \| \[是\] \| \[ok\] \| 0 live sessions/)
+  assert.match(
+    content,
+    /sessions\.list` \| \[是\] \| \[ok\] \| 0 live sessions/,
+  )
   // fork 只查在场，实调列为「—」。
   assert.match(
     content,
