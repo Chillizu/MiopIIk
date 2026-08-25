@@ -199,9 +199,12 @@
         provider: spawn
         toolName: subagent
         backgroundMode: continuable
+        # ── 模型路由唯一定义点（YAML 锚点，先定义后引用）────────────────
+        # 常规子代理默认 flash：换 provider/model 只改下面两行，
+        # 下游 *dsh-provider / *flash-model 引用处自动跟随。
         agentOptions:
-          provider: deepseek-official
-          model: deepseek-v4-flash
+          provider: &dsh-provider deepseek-official
+          model: &flash-model deepseek-v4-flash
 
     - id: tool-subagent-fork
       name: '@deepseek-ai/dsh-tool-subagent'
@@ -210,8 +213,8 @@
         toolName: subagent_fork
         backgroundMode: continuable
         agentOptions:
-          provider: deepseek-official
-          model: deepseek-v4-flash
+          provider: *dsh-provider
+          model: *flash-model
 
     # ── MiOpIIk 层派发行（D25）+ mop_spawn_executor：planner/supervisor 走 per-child persona 覆盖 + toolFilter；executor 走 mop_spawn_executor（内嵌 persona + toolFilter + 可指定 model） ──
     # 子代理加入本 preset 的全部工具；persona 只换身份段；toolFilter 收紧工具面。
@@ -223,8 +226,8 @@
         toolName: subagent_planner
         backgroundMode: continuable
         agentOptions:
-          provider: deepseek-official
-          model: deepseek-v4-pro
+          provider: *dsh-provider
+          model: deepseek-v4-pro # 规划层强模型：唯一手写处（弱模型实验时只改这里）
         persona: |
           # 规划层（Planner）系统提示
 
@@ -289,8 +292,8 @@
         toolName: subagent_supervisor
         backgroundMode: continuable
         agentOptions:
-          provider: deepseek-official
-          model: deepseek-v4-flash
+          provider: *dsh-provider
+          model: *flash-model
         persona: |
           # 监督层（Supervisor）系统提示
 

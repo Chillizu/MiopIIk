@@ -1,6 +1,25 @@
 # mop-plugins
 
+[![CI](https://github.com/Chillizu/mop-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/Chillizu/mop-plugins/actions/workflows/ci.yml)
+
 MiOpIIk 的 DeepSeek Harness（DSH）插件集。
+
+**English**: MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness — checkpoint/rewind recovery, controlled executor subagents, a model authorization gate, seam-capability probing, token telemetry, and a four-layer (reviewer/planner/supervisor/executor) agent workflow preset. Install all of it with one command: `dsh plugin --profile web add dsh-miopiik`.
+
+## 架构总览
+
+```mermaid
+graph TD
+    U[用户] -->|任务 / 独立验收| R[审查层 Reviewer<br/>主会话 · miopiik preset]
+    R -->|2.1 任务下达| P[规划层 Planner<br/>continuable 子代理 · 强模型]
+    R -.->|接收 [EXEC] 报告| S[监督层 Supervisor<br/>沉默即通过 · 弱模型]
+    P -->|契约文件 + 并行派发| E1[执行层 Executor ×N<br/>one-shot · mop_spawn_executor]
+    E1 -->|交付 + 验收对照| P
+    P -->|[EXEC] 周期汇报| R
+    S -.->|[CONCERN] 仅路径偏离时| R
+```
+
+四角色职责、通信协议与设计决策见 [`docs/PLAN.md`](docs/PLAN.md)。
 
 ## 快速安装：给 Agent 的一键提示词
 
@@ -47,6 +66,25 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
    不 commit、不 push。
 ```
 
+## English Quickstart
+
+MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness: checkpoint/rewind recovery (`dsh-miopiik-tool-recovery`), controlled one-shot executor subagents (`mop_spawn_executor`), a model authorization gate, two-evidence-level seam probing, token telemetry, magic keywords, and a four-layer reviewer/planner/supervisor/executor workflow preset.
+
+```bash
+# 1) plugins — all seven with one command
+dsh plugin --profile web add dsh-miopiik
+
+# 2) preset — the four-layer workflow (copies to ${DSH_HOME}/.agent-presets/miopiik)
+npx dsh-miopiik-init
+
+# 3) restart DSH, then validate the mount
+#    standingKeyFor('miopiik')
+```
+
+Smoke task (no credentials needed): start a session on the `miopiik` preset and ask for
+`mop_probe_capabilities` → read `.dsh/memory/capabilities.md`, then `mop_checkpoint`
+with a label, then `mop_checkpoint_list`.
+
 ## 范围
 
 本仓库包含重建 MiOpIIk 插件层与 preset 的全部材料：
@@ -58,17 +96,18 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
 DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
-## 插件清单（7 包）
+## 插件清单（7 包 + 1 套件包）
 
-| 包                           | 类型   | 工具 / 行为                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dsh-miopiik-tool-recovery`  | 恢复   | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
-| `dsh-miopiik-executor`       | 执行   | `mop_spawn_executor`（一次性执行层子代理，逐次指定 model/provider/`timeoutMs` 硬超时；Config: `provider`/`model`/`maxOutputChars`，默认 flash）                                                                                                                                 |
-| `dsh-miopiik-magic-keywords` | hook   | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
-| `dsh-miopiik-model-auth`     | 授权闸 | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸（Config: `allowlistPath`）                                                                                                                                                                 |
-| `dsh-miopiik-capabilities`   | 探测   | `mop_probe_capabilities`（探测 DSH seam 可用性 → `.dsh/memory/capabilities.md` 能力清单，防上游漂移）                                                                                                                                                                           |
-| `dsh-miopiik-learn`          | 学习   | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
-| `dsh-miopiik-run-stats`      | 遥测   | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
+| 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 7 插件（聚合 bundle patch）+ `dsh-miopiik-init` 初始化 miopiik preset                                                                                                                                                                                              |
+| [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | 恢复     | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
+| [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，逐次指定 model/provider/`timeoutMs` 硬超时；Config: `provider`/`model`/`maxOutputChars`/`strict`，默认 flash）                                                                                                                        |
+| [`dsh-miopiik-magic-keywords`](packages/dsh-miopiik-magic-keywords/) | hook     | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
+| [`dsh-miopiik-model-auth`](packages/dsh-miopiik-model-auth/)         | 授权闸   | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸（Config: `allowlistPath`）                                                                                                                                                                 |
+| [`dsh-miopiik-capabilities`](packages/dsh-miopiik-capabilities/)     | 探测     | `mop_probe_capabilities`（探测 DSH seam 可用性，清单含「在场 / 实调」双证据与环境行 → `.dsh/memory/capabilities.md`）                                                                                                                                                           |
+| [`dsh-miopiik-learn`](packages/dsh-miopiik-learn/)                   | 学习     | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
+| [`dsh-miopiik-run-stats`](packages/dsh-miopiik-run-stats/)           | 遥测     | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
 
 ## 工具安全行为与限制
 
@@ -149,3 +188,16 @@ dsh plugin --profile web add \
 - 包 / 插件 name / 组合行 id：`dsh-miopiik-<feature>`（npm 无 scope，与 DSH 官方包的 `dsh-` 风格对齐；2026-08 起由旧名 `@chillizu/mop-<feature>` 全量改名，一一对应）
 - 工具：`mop_<verb>`，下划线小写动词（如 `mop_spawn_executor`、`mop_run_stats`），保持不变——与 DSH 内置工具（`session_search`、`send_message` 等）的 snake_case 风格一致；persona、实验 golden 装置不受改名影响
 - preset id：小写 `miopiik`
+
+### 模型路由切换（miopiik preset）
+
+examples/miopiik 的 provider/model 用 YAML 锚点收敛为唯一定义点（真实 Loader 组合测试覆盖）：
+
+| 层                         | 模型                                     | 定义位置                                                    |
+| -------------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| 审查层（主会话）           | 用户自己的模型路由                       | preset 不干预                                               |
+| 常规子代理 / fork / 监督层 | `&flash-model`（默认 deepseek-v4-flash） | `tool-subagent` 行 agentOptions（锚点定义处，改一处全跟随） |
+| 规划层                     | 强模型（默认 deepseek-v4-pro）           | `tool-subagent-planner` 行（唯一手写处）                    |
+| 执行层                     | 包 Config 默认 flash，可逐调用指定       | `dsh-miopiik-executor` 的 Config / per-call 参数            |
+
+换 provider 时改锚点定义处的 `&dsh-provider` 与上述两处 model 即可；不引入环境变量插值等未证实特性。

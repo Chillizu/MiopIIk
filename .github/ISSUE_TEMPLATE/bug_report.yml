@@ -1,0 +1,39 @@
+name: Bug report
+description: 报告插件缺陷或与上游 DSH 的契约漂移
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        证据优先：能附 `.dsh/memory/capabilities.md` 内容的请务必附上——它是本次部署
+        seam 实测清单（在场/实调双证据），比口头描述快得多。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么（含预期行为）
+      description: 结论先行；报错原文请原样粘贴，不要转述。
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. dsh plugin list 输出（或 profile bundles 列表）
+        2. 调用的工具与参数
+        3. 实际返回
+    validations:
+      required: true
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: capabilities 清单输出
+      description: 会话内运行 mop_probe_capabilities 后，粘贴 .dsh/memory/capabilities.md 全文。
+      render: markdown
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      placeholder: 'dsh 版本 / Node 版本 / OS（capabilities.md 的「运行环境」行可直接贴）'
+    validations:
+      required: true
