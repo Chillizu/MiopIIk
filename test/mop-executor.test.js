@@ -213,3 +213,33 @@ test('timeoutMs rejects non-finite / non-positive values', async () => {
     )
   }
 })
+
+test('Config.strict=true drops bash/write from the executor tool face (edit kept)', async () => {
+  const { ctx, registered, starts } = makeCtx()
+  apply(ctx, { strict: true })
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.deepEqual(starts[0].request.toolFilter.allow, [
+    'read',
+    'glob',
+    'grep',
+    'edit',
+    'todo_write',
+  ])
+})
+
+test('Config.strict=false keeps the default tool face unchanged', async () => {
+  const { ctx, registered, starts } = makeCtx()
+  apply(ctx, { strict: false })
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.deepEqual(starts[0].request.toolFilter.allow, [
+    'read',
+    'write',
+    'edit',
+    'glob',
+    'grep',
+    'bash',
+    'todo_write',
+  ])
+})

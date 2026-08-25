@@ -13,6 +13,9 @@ export const Config = z.object({
   provider: z.string().default(DEFAULT_PROVIDER),
   model: z.string().default(DEFAULT_MODEL),
   maxOutputChars: z.natural().default(DEFAULT_MAX_OUTPUT_CHARS),
+  // strict：收紧执行层工具面（去 bash/write）。edit 保留——persona 硬规则 3 本就要求
+  // 「只 append 不覆盖」，多轮追加靠 edit；strict 面向不可信任务/来宾场景。
+  strict: z.boolean().default(false),
 })
 
 const stringOutput = {
@@ -50,6 +53,12 @@ const EXECUTOR_TOOL_FILTER = {
   allow: ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'todo_write'],
 }
 
+// strict 模式工具面：去 bash/write（Config.strict，默认关）。同样受 P3-8 硬契约约束：
+// 上游 tools.restrict 对未知工具名抛错，改名/新增须同步。
+const STRICT_EXECUTOR_TOOL_FILTER = {
+  allow: ['read', 'glob', 'grep', 'edit', 'todo_write'],
+}
+
 function textOf(blocks) {
   return (blocks || [])
     .map((b) => (b && b.type === 'text' ? b.text : ''))
@@ -60,6 +69,8 @@ export function apply(ctx, config = {}) {
   const providerDefault = config.provider ?? DEFAULT_PROVIDER
   const modelDefault = config.model ?? DEFAULT_MODEL
   const maxOutputChars = config.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS
+  const toolFilter =
+    config.strict === true ? STRICT_EXECUTOR_TOOL_FILTER : EXECUTOR_TOOL_FILTER
 
   ctx.tools.register(
     defineTool({
@@ -138,7 +149,7 @@ export function apply(ctx, config = {}) {
               parent: exec.agent,
               agentOptions: { provider, model },
               persona: EXECUTOR_PERSONA,
-              toolFilter: EXECUTOR_TOOL_FILTER,
+              toolFilter,
               signal: controller.signal,
               maxDepth: 1,
             })
