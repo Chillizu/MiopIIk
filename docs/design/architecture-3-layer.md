@@ -83,7 +83,7 @@ DSH 机制（源码核实）：子代理**加入父级 preset**（无 per-child 
     agentOptions: { provider: deepseek-official, model: deepseek-v4-pro }
     persona: <规划层 prompt 全文>
     toolFilter:
-      deny: [ask_user_question, ralph, create_goal, get_goal, update_goal, web_search]
+      deny: [ask_user_question, ralph, create_goal, get_goal, update_goal, web_search, mop_model_authorize, mop_model_revoke]  # 后两项 = model-auth 自授权环收口
 
 # 执行层 = mop_spawn_executor 自定义工具（mop-executor 包注册，非 delegation 行）：
 #   persona + toolFilter allow 最小集 + 可指定 model（默认 flash）内嵌于工具实现

@@ -278,6 +278,9 @@
             - get_goal
             - update_goal
             - web_search
+            # 模型授权面只属于用户主会话（model-auth 边界）：规划层不得自授模型。
+            - mop_model_authorize
+            - mop_model_revoke
 
     - id: tool-subagent-supervisor
       name: '@deepseek-ai/dsh-tool-subagent'
