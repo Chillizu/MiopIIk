@@ -173,6 +173,17 @@ export function apply(ctx) {
     ruleState.delete(sid)
   })
 
+  // 插件 fiber 生命周期兜底：stop/update/undefine 时回收全部仍挂着的规则
+  // section。此前只靠 agent/disposed——会话未 dispose 而插件先停时，
+  // 注入的 systemPrompt section 会泄漏到进程里。disposer 幂等，与上面的
+  // 会话级清理、mop_rule_clear 互不冲突（fiber teardown 晚于一切工具调用）。
+  ctx.effect(() => () => {
+    for (const state of ruleState.values()) {
+      if (state.disposer) state.disposer()
+    }
+    ruleState.clear()
+  })
+
   tools.register(
     defineTool({
       name: 'mop_checkpoint',

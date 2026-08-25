@@ -9,9 +9,17 @@ function makeCtx(overrides = {}) {
   const writes = []
   const creates = []
   const listeners = {}
+  const teardowns = []
   const ctx = {
     on: (event, fn) => {
       listeners[event] = fn
+    },
+    // fiber 生命周期：记录 apply 注册的 teardown disposer，测试可手动触发
+    // 模拟插件 stop/update。
+    effect: (setup) => {
+      const disposer = setup()
+      if (typeof disposer === 'function') teardowns.push(disposer)
+      return disposer
     },
     tools: {
       register: (tool) => {
@@ -41,7 +49,7 @@ function makeCtx(overrides = {}) {
     },
     ...overrides,
   }
-  return { ctx, registered, writes, creates, listeners }
+  return { ctx, registered, writes, creates, listeners, teardowns }
 }
 
 function agent(id) {
@@ -356,6 +364,43 @@ test('agent/disposed cleans up injected rule state', () => {
     show.execute({}, { agent: agent('session-a') }),
     '(no rule injected)',
   )
+})
+
+test('fiber teardown disposes every remaining rule section (plugin stop/update)', () => {
+  const { ctx, registered, teardowns } = makeCtx()
+  apply(ctx)
+  const inject = registered.find((t) => t.name === 'mop_rule_inject')
+  const show = registered.find((t) => t.name === 'mop_rule_show')
+
+  // 可观测的 section disposer：验证 fiber teardown 真的调用了它。
+  const disposed = []
+  const spyAgent = (id) => ({
+    session: { id, header: { cwd: '/tmp' } },
+    ctx: {
+      get: (name) =>
+        name === 'systemPrompt'
+          ? {
+              section: () => () => {
+                disposed.push(id)
+              },
+            }
+          : undefined,
+    },
+  })
+
+  inject.execute({ text: 'rule A' }, { agent: spyAgent('session-a') })
+  inject.execute({ text: 'rule B' }, { agent: spyAgent('session-b') })
+  assert.equal(teardowns.length, 1, 'apply registers exactly one effect')
+
+  // 模拟插件 stop/update：fiber teardown 触发 effect disposer。
+  for (const disposer of teardowns) disposer()
+
+  assert.deepEqual(disposed.sort(), ['session-a', 'session-b'])
+  assert.equal(show.execute({}, { agent: agent('session-a') }), '(no rule injected)')
+  assert.equal(show.execute({}, { agent: agent('session-b') }), '(no rule injected)')
+
+  // 幂等：二次 teardown 不抛错。
+  for (const disposer of teardowns) disposer()
 })
 
 // ── mop_checkpoint_prune ──
