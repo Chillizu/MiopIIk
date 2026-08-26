@@ -3,7 +3,7 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
-## [Unreleased]
+## [0.1.4] - 2026-08-26
 
 ### Fixed
 
