@@ -3,6 +3,14 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [Unreleased]
+
+### Fixed
+
+- preset：移除对上游 rc.2 已删除包 `@deepseek-ai/dsh-tool-session-query` 的幽灵行引用——该行导致 miopiik 预设挂载即失败（`agent-preset-invalid: failed to import loader entry`，切换秒退回上一预设），替换为解释性注释。
+- preset：派发分流硬规则收窄（D35）——原「评测/对比等可控场景禁派发」豁免被模型援引跳过整条流水线（A/B 基准实测：实现类任务全程单机执行）。收窄为：豁免仅限**不产出工件的纯问答/诊断/检索讨论**；实现类任务无论大小一律走规划层→执行层；授权闸与 D33 模型确认合并为同一次 `ask_user_question`；任务书声明全自动时视为预授权。
+- `dsh-miopiik-executor`：修复 `mop_spawn_executor` 的 `maxDepth` 语义错用——该参数是**绝对**深度上限而非相对层数，写死 1 使规划层（delegationDepth 1）派发必然 `SubagentDepthError: depth 2 exceeds maxDepth 1`，规划层被迫亲自下场写码（三层架构退化为两层，ench1 基准实测撞上）。改为随调用者深度浮动 `parentDepth + 1`：执行器恒为调用者的下一层叶子、不可再级联。
+
 ## [0.1.3] - 2026-08-26
 
 ### Changed

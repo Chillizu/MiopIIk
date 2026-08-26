@@ -61,7 +61,7 @@ test('mop_spawn_executor passes model + toolFilter and returns output', async ()
   // 而非直接透传 exec.signal（测试里是字符串 'SIG'，无 addEventListener，不桥接）。
   assert.ok(starts[0].request.signal instanceof AbortSignal)
   assert.equal(starts[0].request.signal.aborted, false)
-  assert.equal(starts[0].request.maxDepth, 1)
+  assert.equal(starts[0].request.maxDepth, 1) // 顶层调用者（header 缺 depth = 0）→ cap 1
   assert.deepEqual(starts[0].request.toolFilter.allow, [
     'read',
     'write',
@@ -71,6 +71,25 @@ test('mop_spawn_executor passes model + toolFilter and returns output', async ()
     'bash',
     'todo_write',
   ])
+})
+
+test('maxDepth is absolute-parent+1: planner (depth 1) can spawn executors', async () => {
+  const { ctx, registered, starts } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  // 规划层位于 delegationDepth 1（ench1 基准实测：写死 maxDepth=1 导致
+  // SubagentDepthError "depth 2 exceeds maxDepth 1"，规划层被迫亲自下场）。
+  await tool.execute(
+    { prompt: 'task' },
+    { agent: { session: { header: { id: 'p1', delegationDepth: 1 } } } },
+  )
+  assert.equal(starts[0].request.maxDepth, 2)
+  // 更深层调用者同理浮动；执行器仍是调用者的下一层叶子，不可再级联。
+  await tool.execute(
+    { prompt: 'task' },
+    { agent: { session: { header: { id: 'p2', delegationDepth: 2 } } } },
+  )
+  assert.equal(starts[1].request.maxDepth, 3)
 })
 
 test('default model is flash', async () => {

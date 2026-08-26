@@ -45,6 +45,7 @@
 | D32 | 轻量模式 = 三档 preset（类型：设计；状态：已定；证据：外部讨论 + 社区查证）——纠正「极简模式最好」（官方极简=基准测试用，非生产推荐）；审查层「只用 bash」**否决**（bash 是无差别管道：藏能力 + 丢 sandboxPolicy 细粒度，且砍掉体系在用的 read/grep/edit/session_search）；工具面已按职责收窄（执行 7/监督 6），真瘦身空间在 prompt+上下文。三档：miopiik-lite（单会话无 subagent 行）/ miopiik（现状）/ miopiik-full（四层+监督+授权闸全开），三档共享 persona + mop 插件；lite 无 subagent 行 = U3 场景级禁停机制化；升档路径写入审查层 persona。红线：不动 compaction（D24）、不动 session_query/记忆（D12/D10） | [lightweight-mode](docs/design/lightweight-mode.md) |
 | D33 | 上游裁判输入通道（类型：过程原则；状态：已定；证据：上游模型实战 + D17）——审查层=体系内 CTO（当事人、有执行权、判错担责）；上游模型裁判=外聘审计（局外人、零利益相关、每轮重置、只有说服力）；其「清醒」=结构性清白（无沉没成本）。教训：给上游裁判的永远是一手产物 + 复算路径（仓库/源码/原始报告），不是中间层结论；2.5 汇报模板「证据等级：URL/日志/复算脚本」栏是最不能省的 | [report-template](docs/design/templates/report-template.md) §4 |
 | D34 | 监督层红队 benchmark（类型：实验提案；状态：设计已定，待跑，D29v3 fallback 阶梯末级）——对监督层直接喂对抗生成坏活，测能力级判别力，解耦执行层 base rate；与系统级 H2（D29v3）分开，单独预注册 | [d29v3-experiment-design](docs/design/d29v3-experiment-design.md) §2 |
+| D35 | 派发分流硬规则（类型：过程原则；状态：已定；证据：A/B 基准 mdtodo 导出复盘）——原「评测/对比等可控场景禁派发」豁免被模型援引跳过整条流水线（miopiik 会话 6e010d8f 全程单机执行，0 次派发/0 次 ask_user_question）。收窄为：禁派发豁免**仅限不产出工件的纯问答/诊断/检索讨论**；实现类任务无论大小一律走规划层→执行层；授权闸与 D33 模型确认合并为同一次 `ask_user_question`；任务书声明全自动时视为预授权 | [agent.cordis.yml](examples/miopiik/agent.cordis.yml) 硬规则1 + 任务分配 |
 
 ## 3. 计划树索引
 

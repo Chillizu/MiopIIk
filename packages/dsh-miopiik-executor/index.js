@@ -193,6 +193,18 @@ export function apply(ctx, config = {}) {
         try {
           let run
           try {
+            // maxDepth 是【绝对】深度上限（resolveChildDepth: child=parent+1 ≤ cap），
+            // 不是相对层数。执行器语义 = 「调用者的下一层叶子，不再级联」，
+            // 所以 cap 必须随调用者深度浮动：审查层(0)派发→1，规划层(1)派发→2。
+            // 写死 1 会让规划层派发必然 SubagentDepthError（ench1 基准实测撞上，
+            // 规划层被迫亲自下场写码——三层架构退化为两层）。
+            // 上游 SessionHeader 对顶层会话不写 delegationDepth 字段 → ?? 0。
+            const parentDepth =
+              (exec &&
+                exec.agent &&
+                exec.agent.session &&
+                exec.agent.session.header &&
+                exec.agent.session.header.delegationDepth) ?? 0
             run = await ctx.subagents.start('spawn', {
               label: `executor:${model}`,
               prompt: [{ type: 'text', text: args.prompt }],
@@ -201,7 +213,7 @@ export function apply(ctx, config = {}) {
               persona: EXECUTOR_PERSONA,
               toolFilter,
               signal: controller.signal,
-              maxDepth: 1,
+              maxDepth: parentDepth + 1,
             })
           } catch (error) {
             // 超时恰好在子代理发布前触发：无 session id 可暴露，返回明确的超时结果。
