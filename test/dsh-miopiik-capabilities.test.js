@@ -114,6 +114,19 @@ test('manifest records two evidence levels plus harness environment', async () =
   assert.match(content, /运行环境：node v/)
 })
 
+test('manifest 标注本会话层级：根=审查层，depth1=规划层', async () => {
+  const { ctx, registered, writes } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_probe_capabilities')
+  await tool.execute({}, { agent: agent('session-a') })
+  // 根会话 header 无 delegationDepth（absent = 0）→ 审查层。
+  assert.match(writes[0].content, /depth 0（审查层）/)
+  await tool.execute({}, { agent: subagentAgent('planner-1') })
+  assert.match(writes[1].content, /depth 1（规划层）/)
+  // 层级预算行让每层自知还能不能派、深派要不要授权。
+  assert.match(writes[1].content, /执行·监督\(2，叶子不再派发\)/)
+})
+
 test('detail 字段的 | 与换行被转义，不破坏 markdown 表格', async () => {
   const { ctx, registered, writes } = makeCtx({
     sessionPersistence: {

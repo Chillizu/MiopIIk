@@ -46,6 +46,7 @@
 | D33 | 上游裁判输入通道（类型：过程原则；状态：已定；证据：上游模型实战 + D17）——审查层=体系内 CTO（当事人、有执行权、判错担责）；上游模型裁判=外聘审计（局外人、零利益相关、每轮重置、只有说服力）；其「清醒」=结构性清白（无沉没成本）。教训：给上游裁判的永远是一手产物 + 复算路径（仓库/源码/原始报告），不是中间层结论；2.5 汇报模板「证据等级：URL/日志/复算脚本」栏是最不能省的 | [report-template](docs/design/templates/report-template.md) §4 |
 | D34 | 监督层红队 benchmark（类型：实验提案；状态：设计已定，待跑，D29v3 fallback 阶梯末级）——对监督层直接喂对抗生成坏活，测能力级判别力，解耦执行层 base rate；与系统级 H2（D29v3）分开，单独预注册 | [d29v3-experiment-design](docs/design/d29v3-experiment-design.md) §2 |
 | D35 | 派发分流硬规则（类型：过程原则；状态：已定；证据：A/B 基准 mdtodo 导出复盘）——原「评测/对比等可控场景禁派发」豁免被模型援引跳过整条流水线（miopiik 会话 6e010d8f 全程单机执行，0 次派发/0 次 ask_user_question）。收窄为：禁派发豁免**仅限不产出工件的纯问答/诊断/检索讨论**；实现类任务无论大小一律走规划层→执行层；授权闸与 D33 模型确认合并为同一次 `ask_user_question`；任务书声明全自动时视为预授权 | [agent.cordis.yml](examples/miopiik/agent.cordis.yml) 硬规则1 + 任务分配 |
+| D36 | 层级拓扑与深度预算（类型：设计；状态：已定；证据：ench1 复盘——maxDepth 写死 1 使规划层(depth1)派执行器必然 SubagentDepthError，三层退两层）——四层架构树 = 审查(0)→规划(1)→{执行×N，监督}(2)，depth 2 为叶子不再派发；极端第 3 层须用户经授权闸明示同意，默认横向加派不纵向加深。机制面：`mop_spawn_executor` maxDepth 改为调用者深度+1 相对浮动；能力清单头部新增「本会话层级」行供各层自查；审查/规划 persona 固化层级纪律 | [phase1-runbook](docs/design/phase1-runbook.md) §3.1 |
 
 ## 3. 计划树索引
 

@@ -26,6 +26,18 @@ PASS：清单吻合。FAIL：缺工具 → 回本文档 §6 排障。
 
 审查层调用 `subagent_planner`，prompt = 模板 2.1 全文（含 PLAN.md 引用）。记录返回的 subagent id（规划层 id，后文称 P）。
 
+### 3.1 层级拓扑与深度预算（ench1 复盘后固化）
+
+| depth | 层 | 可派发 | 备注 |
+|---|---|---|---|
+| 0 | 审查层（主会话） | `subagent_planner`、`subagent_supervisor`（直连模式）、`mop_spawn_executor` | 授权闸 + D33 模型确认在此层 |
+| 1 | 规划层 | `subagent_supervisor`、`mop_spawn_executor` ×N | 执行模型按 model-policy 传参 |
+| 2 | 执行层 / 监督层 | 无（叶子） | toolFilter 不含任何 spawn 工具 |
+| 3 | 极端场景 | — | 仅限用户经授权闸明示同意；默认横向加派不纵向加深 |
+
+- 深度上限语义：`mop_spawn_executor` 的 maxDepth = 调用者深度 + 1（相对浮动，0.1.5 起）；`subagent_planner`/`subagent_supervisor` 行沿用上游默认 cap 3。
+- 各层自查位置：`mop_probe_capabilities` 清单头部「本会话层级」行。
+
 ## 4. 规划层首轮验收点（读其报告）
 
 规划层首轮应先做（由其 prompt 约束）：

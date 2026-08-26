@@ -190,7 +190,25 @@ function harnessInfo() {
   } | harness root: ${root || 'unknown'}`
 }
 
-function renderManifest(results, cwd) {
+// 四层架构的层级自知道（ench1 复盘：各层应知道自己是谁、还能不能再派）。
+// 真实 SessionHeader 对根会话不写 delegationDepth（absent = 0），子代理 >= 1。
+function tierOf(depth) {
+  if (depth === 0) return '审查层'
+  if (depth === 1) return '规划层'
+  return '执行/监督层或更深'
+}
+
+function delegationLine(agent) {
+  const depth =
+    (agent &&
+      agent.session &&
+      agent.session.header &&
+      agent.session.header.delegationDepth) ??
+    0
+  return `> 本会话层级：depth ${depth}（${tierOf(depth)}）。层级预算：审查(0)→规划(1)→执行·监督(2，叶子不再派发)；第 3 层属极端场景，须用户经授权闸明示同意。`
+}
+
+function renderManifest(results, cwd, agent) {
   const degraded = results.filter((r) => !r.ok).length
   const status = degraded === 0 ? 'OK' : 'DEGRADED'
   const rows = results
@@ -205,6 +223,7 @@ function renderManifest(results, cwd) {
 
 > 探测时间：${new Date().toISOString()} | status：${status} | cwd：${cwd} | 由 \`dsh-miopiik-capabilities\` 生成。
 > 运行环境：${harnessInfo()}
+${delegationLine(agent)}
 > 读此文件了解当前部署 seam 可用性；**勿凭记忆假设上游契约**（DSH 尚在 rc，seam 语义可能流动）。
 > 两列语义：「在场」= 原语存在（typeof 检查）；「实调」= 非破坏性实调结果，「—」= 未实调（有副作用或需会话上下文）。**在场 ≠ 可用**。
 
@@ -234,7 +253,7 @@ export function apply(ctx) {
     const info = await fs.stat(target)
     await fs.writeText(
       target,
-      renderManifest(results, cwd),
+      renderManifest(results, cwd, agent),
       info === undefined
         ? { kind: 'createIfAbsent' }
         : { kind: 'replaceIfVersion', version: info.version },

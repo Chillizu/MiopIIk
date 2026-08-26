@@ -3,7 +3,15 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
-## [0.1.4] - 2026-08-26
+## [0.1.5] - 2026-08-26
+
+### Added
+
+- `dsh-miopiik-capabilities`：能力清单头部新增「本会话层级」行——按 delegationDepth 标注当前层（0=审查层/1=规划层/2+=执行·监督或更深）与层级预算（四层架构：审查(0)→规划(1)→执行·监督(2)；极端第 3 层须授权闸），各层自查位置。
+
+### Changed
+
+- preset：审查层硬规则新增「层级与深度预算」（D36）、规划层 persona 新增「层级纪律」——depth 2 为叶子不再派发，级联加深须先向审查层申请授权；runbook §3.1 固化层级拓扑表。
 
 ### Fixed
 
