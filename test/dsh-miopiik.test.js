@@ -46,6 +46,8 @@ test('meta dependencies pin the seven packages at the suite version', () => {
   for (const name of SEVEN) {
     assert.equal(pkg.dependencies[name], `^${pkg.version}`)
   }
+  // npx 按包名解析：必须存在与包同名的 bin，否则 `npx dsh-miopiik` 会 404。
+  assert.ok(pkg.bin && typeof pkg.bin['dsh-miopiik'] === 'string')
 })
 
 test('bundled preset stays byte-identical to examples/miopiik', () => {

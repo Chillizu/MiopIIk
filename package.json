@@ -1,7 +1,7 @@
 {
   "name": "mop-plugins",
   "description": "mop-plugins：DeepSeek Harness（DSH）单职责插件集（npm workspaces monorepo）",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "license": "MIT",

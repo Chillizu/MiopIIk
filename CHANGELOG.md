@@ -3,6 +3,12 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.1] - 2026-08-26
+
+### Fixed
+
+- 套件包 bin 主键改为与包同名（`dsh-miopiik`）：`npx dsh-miopiik` 此前按包名解析会 404；原 `dsh-miopiik-init` 保留为别名。文档统一改用 `npx dsh-miopiik`。
+
 ## [0.1.0] - 2026-08-26
 
 首个公开版本（npm 首发 + 市场可发现形态）。
@@ -17,7 +23,7 @@
   - `dsh-miopiik-capabilities`：DSH seam 探测，能力清单含「在场 / 实调」双证据与环境行（D27）。
   - `dsh-miopiik-learn`：`.dsh/skills/` 技能铸造与只读枚举（D12）。
   - `dsh-miopiik-run-stats`：会话累计 token 四桶可编程出口（D18）。
-- 套件包 `dsh-miopiik`：一条 `dsh plugin --profile <p> add dsh-miopiik` 插入全部 7 行；附 `dsh-miopiik-init` 初始化 miopiik 四层工作流 preset。
+- 套件包 `dsh-miopiik`：一条 `dsh plugin --profile <p> add dsh-miopiik` 插入全部 7 行；附 bin 初始化四层工作流 preset（`npx dsh-miopiik`）。
 - `examples/miopiik/`：脱敏 agent preset 模板（三层 + 监督层工作流，planner/supervisor delegation 行 + toolFilter 边界）。
 
 ### Security
@@ -28,4 +34,5 @@
 
 - **BREAKING**（相对未发布的旧本地名）：包名由 `@chillizu/mop-*` 全量改为 `dsh-miopiik-*`；工具名 `mop_*` 保持不变。迁移步骤见 README「从旧名迁移」。
 
+[0.1.1]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.0

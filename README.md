@@ -46,7 +46,7 @@ graph TD
 
 2. 确认完成后，按 README「安装」章节执行，优先方式一（套件包）：
    `dsh plugin --profile <profile> add dsh-miopiik` 装插件层 +
-   `npx dsh-miopiik-init` 装 preset（用户未同意 preset 则跳过此步）。
+   `npx dsh-miopiik` 装 preset（用户未同意 preset 则跳过此步）。
    仅当用户明确选择源码安装时，才 clone 仓库并改用
    `dsh plugin --profile <profile> add link:./packages/...` 逐个装 7 个包、
    再 `cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"`。
@@ -75,7 +75,7 @@ MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness: checkp
 dsh plugin --profile web add dsh-miopiik
 
 # 2) preset — the four-layer workflow (copies to ${DSH_HOME}/.agent-presets/miopiik)
-npx dsh-miopiik-init
+npx dsh-miopiik
 
 # 3) restart DSH, then validate the mount
 #    standingKeyFor('miopiik')
@@ -100,7 +100,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 | 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 7 插件（聚合 bundle patch）+ `dsh-miopiik-init` 初始化 miopiik preset                                                                                                                                                                                              |
+| [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 7 插件（聚合 bundle patch）+ `npx dsh-miopiik` 初始化 miopiik preset                                                                                                                                                                                               |
 | [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | 恢复     | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
 | [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，逐次指定 model/provider/`timeoutMs` 硬超时；Config: `provider`/`model`/`maxOutputChars`/`strict`，默认 flash）                                                                                                                        |
 | [`dsh-miopiik-magic-keywords`](packages/dsh-miopiik-magic-keywords/) | hook     | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
@@ -128,7 +128,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 dsh plugin --profile web add dsh-miopiik
 
 # preset 层（完整四层工作流需要）：初始化 miopiik preset 到 ${DSH_HOME}/.agent-presets/miopiik
-npx dsh-miopiik-init          # 目标已存在则拒绝覆盖；--force 覆盖
+npx dsh-miopiik               # 目标已存在则拒绝覆盖；--force 覆盖（别名 dsh-miopiik-init 同义）
 ```
 
 `dsh plugin add` 会把声明了 `dsh.bundle.patch` 的包并入 profile 的 bundles 列表并自动解析依赖；重启后 `standingKeyFor` 挂载验证。
