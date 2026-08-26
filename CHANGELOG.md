@@ -3,6 +3,18 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.2] - 2026-08-26
+
+### Added
+
+- `dsh-miopiik-model-auth`：`mop_model_list` 升级为模型发现面——经 `llm` 服务枚举本部署可路由的 providers × models，逐条标注 `[默认]`/`[已授权]`；单 provider 枚举失败被隔离呈现，seam 缺失仅失去枚举不崩（D31）。
+- `dsh-miopiik-model-auth`：新增 `Config.allowlist`（`provider/model` 行数组）——组合层静态预授权种子，免去每次会话的 authorize 往返；非法条目 apply 即抛错。运行期 revoke 对种子同样生效，但重启后随配置重新并入（永久移除须改配置）（D31）。
+- `dsh-miopiik-executor`：动态默认模型（D32）——`mop_spawn_executor` 省略 `model`/`provider` 时整对继承调用者当下实际使用的模型（经 `agent/request` waterfall 采样，FIFO 上限 256 会话）；显式传参永远最高优先级（只给其一时另一字段按字段回退 Config 固定值，不与采样混搭）；`Config.followCallerModel: false` 可关闭回到静态默认。
+
+### Changed
+
+- examples/miopiik 规划层 persona：派发执行切片必须显式传 `model: deepseek-v4-flash`，守住「规划强模型 / 执行廉价模型」的层间成本结构（否则 D32 继承会让执行器跑到 pro）。
+
 ## [0.1.1] - 2026-08-26
 
 ### Fixed
@@ -34,5 +46,6 @@
 
 - **BREAKING**（相对未发布的旧本地名）：包名由 `@chillizu/mop-*` 全量改为 `dsh-miopiik-*`；工具名 `mop_*` 保持不变。迁移步骤见 README「从旧名迁移」。
 
+[0.1.2]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.0

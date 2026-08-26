@@ -16,6 +16,10 @@ export const Config = z.object({
   // strict：收紧执行层工具面（去 bash/write）。edit 保留——persona 硬规则 3 本就要求
   // 「只 append 不覆盖」，多轮追加靠 edit；strict 面向不可信任务/来宾场景。
   strict: z.boolean().default(false),
+  // D32 动态默认：spawn 未显式指定 model/provider 时，整对继承「调用者当下实际
+  // 在用的模型」（经 agent/request waterfall 采样），而非固定 Config 值。
+  // 主会话换模型、preset 行覆盖 planner=pro 等，执行层都自动跟随；置 false 回到静态默认。
+  followCallerModel: z.boolean().default(true),
 })
 
 const stringOutput = {
@@ -69,14 +73,61 @@ export function apply(ctx, config = {}) {
   const providerDefault = config.provider ?? DEFAULT_PROVIDER
   const modelDefault = config.model ?? DEFAULT_MODEL
   const maxOutputChars = config.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS
+  const followCallerModel = config.followCallerModel !== false
   const toolFilter =
     config.strict === true ? STRICT_EXECUTOR_TOOL_FILTER : EXECUTOR_TOOL_FILTER
+
+  // D32 调用者模型采样：agent/request waterfall 里每次请求的 {provider,model}
+  // 按「发起会话 id」记录最近一次值。工具执行发生在调用者的两个 step 之间，
+  // 调用者必然刚发过请求，样本总是新鲜的。FIFO 上限防长驻进程缓慢泄漏；
+  // ctx.on 缺失（极简宿主/测试替身）只失去动态默认，静态回退链完整。
+  const callerModels = new Map()
+  const CALLER_MODELS_MAX = 256
+  if (typeof ctx.on === 'function') {
+    ctx.on('agent/request', async (payload, next) => {
+      const resolved = await next()
+      const agent = payload && payload.agent
+      const header = agent && agent.session && agent.session.header
+      const id = header && header.id
+      if (id && resolved && resolved.provider && resolved.model) {
+        if (!callerModels.has(id) && callerModels.size >= CALLER_MODELS_MAX) {
+          callerModels.delete(callerModels.keys().next().value)
+        }
+        callerModels.set(id, {
+          provider: resolved.provider,
+          model: resolved.model,
+        })
+      }
+      return resolved
+    })
+  }
+
+  // D32 模型解析优先级：
+  // 1) args 显式给出 provider/model 任一字段 → 按字段回退 Config 默认（与旧版一致，
+  //    不与调用者采样混搭——kimi provider 配 deepseek model 名这类杂交只会制造怪象）；
+  // 2) 未显式且 followCallerModel → 整对继承调用者当下模型；
+  // 3) 否则 Config 固定默认成对兜底。
+  function resolveModel(args, exec) {
+    if (args.provider || args.model || !followCallerModel) {
+      return {
+        provider: args.provider || providerDefault,
+        model: args.model || modelDefault,
+      }
+    }
+    const session = exec && exec.agent && exec.agent.session
+    const callerId =
+      (session && session.header && session.header.id) ||
+      (session && session.id)
+    const sample = callerId ? callerModels.get(callerId) : undefined
+    if (sample) return sample
+    return { provider: providerDefault, model: modelDefault }
+  }
 
   ctx.tools.register(
     defineTool({
       name: 'mop_spawn_executor',
       description:
-        'Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors; model/provider optional (defaults to the configured default model); timeoutMs optional (ms, hard timeout that aborts the child).',
+        "Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors. model/provider optional: when both are omitted the child inherits the CALLER'S current model (dynamic default, Config.followCallerModel); when either is given, the missing field falls back to the configured default. timeoutMs optional (ms, hard timeout that aborts the child).",
       parameters: {
         prompt: { type: 'string', required: true },
         model: { type: 'string' },
@@ -89,8 +140,7 @@ export function apply(ctx, config = {}) {
       },
       output: stringOutput,
       async execute(args, exec) {
-        const provider = args.provider || providerDefault
-        const model = args.model || modelDefault
+        const { provider, model } = resolveModel(args, exec)
 
         // timeoutMs 可选：提供时必须是有限正数，缺省 = 无超时（行为不变）。
         const timeoutMs = args.timeoutMs

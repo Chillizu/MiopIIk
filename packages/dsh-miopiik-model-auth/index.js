@@ -24,6 +24,11 @@ const DEFAULT_ALLOWLIST_PATH = join(
 export const Config = z.object({
   // schemastery 无 .optional()：字段默认即 optional（.required() 才强制）。
   allowlistPath: z.string(),
+  // D31 静态预授权种子：profile 作者在组合层声明可用的 `provider/model` 行，
+  // 免去每次会话的 mop_model_authorize 往返（完全自定义模型的组合层入口）。
+  // 与 allowlist 文件取并集生效；运行期 revoke 对种子条目同样生效（进程内），
+  // 但重启后随配置重新并入——要永久移除须改配置，不能只 revoke。
+  allowlist: z.array(z.string()).default([]),
 })
 
 const stringOutput = {
@@ -34,6 +39,24 @@ const stringOutput = {
 export function apply(ctx, config = {}) {
   const allowlistPath = () => config.allowlistPath ?? DEFAULT_ALLOWLIST_PATH
   let cache = null
+
+  // 静态种子在 apply 时一次性校验：非法条目（缺 "/"、空串）直接抛错——
+  // misconfig 必须响（与 P3-8「勿吞真实 misconfig」同一立场），静默跳过会让
+  // 「预授权没生效」变成难排查的幽灵问题。
+  const configSeed = (() => {
+    const entries = config.allowlist ?? []
+    const set = new Set()
+    for (const entry of entries) {
+      const t = String(entry).trim()
+      if (!t || !t.includes('/')) {
+        throw new Error(
+          `dsh-miopiik-model-auth: config.allowlist 条目 ${JSON.stringify(String(entry))} 非法——须为 provider/model 形式`,
+        )
+      }
+      set.add(t)
+    }
+    return set
+  })()
 
   // 授权写入串行化（进程内）：check-then-append 整段入锁，防并发 authorize 丢更新
   // （lost-update）。跨进程由 appendFile 的 O_APPEND 原子追加兜底。
@@ -62,6 +85,8 @@ export function apply(ctx, config = {}) {
         .filter((l) => l && !l.startsWith('#'))
         .map((l) => l.replace(/^-\s*/, '')),
     )
+    // Config.allowlist 种子与文件并集（D31）：种子条目与手工授权同权。
+    for (const k of configSeed) cache.add(k)
     return cache
   }
 
@@ -146,22 +171,58 @@ export function apply(ctx, config = {}) {
     }),
   )
 
-  // ── mop_model_list：展示默认 + allowlist ──
+  // ── mop_model_list：默认 + allowlist + 可用模型发现面 ──
   ctx.tools.register(
     defineTool({
       name: 'mop_model_list',
-      description: '列出当前默认模型与已授权的 subagent 模型（allowlist）。',
+      description:
+        '列出当前默认模型、已授权模型（allowlist），以及本部署上可路由的可用模型清单（经 llm 服务枚举，标注 [默认]/[已授权]）。给 subagent（如 mop_spawn_executor）选自定义模型前先看这里：可用但未授权的，先 mop_model_authorize。',
       parameters: {},
       output: stringOutput,
       async execute() {
         const set = await loadAllowlist()
-        const lines = [
-          `默认模型: ${defaultKey() ?? '(无)'}`,
-          `已授权 (${set.size}):`,
-        ]
+        const dk = defaultKey()
+        const lines = [`默认模型: ${dk ?? '(无)'}`, `已授权 (${set.size}):`]
         for (const k of [...set].sort()) lines.push(`- ${k}`)
+
+        // 可用模型枚举（D31）：llm 是可选 seam，懒 ctx.get 而非 inject（P2-4）——
+        // 缺失时只失去发现面，授权闸完整工作。单 provider 枚举失败不拖垮整体，
+        // 部分可用也要如实呈现（错误行内联，不 throw）。
+        const llm = ctx.get('llm')
+        if (!llm || typeof llm.listProviders !== 'function') {
+          lines.push('可用模型: (llm 服务未挂载，无法枚举)')
+        } else {
+          lines.push('可用模型:')
+          try {
+            const providers = await llm.listProviders()
+            for (const p of providers) {
+              let models
+              try {
+                models = await llm.listModels(p.id)
+              } catch (error) {
+                const msg =
+                  error && error.message ? error.message : String(error)
+                lines.push(`- ${p.id}: (枚举失败: ${msg})`)
+                continue
+              }
+              for (const m of models || []) {
+                const key = `${m.provider ?? p.id}/${m.id}`
+                const tags = []
+                if (key === dk) tags.push('默认')
+                if (set.has(key)) tags.push('已授权')
+                lines.push(
+                  `- ${key}${tags.length ? ` [${tags.join('/')}]` : ''}`,
+                )
+              }
+            }
+          } catch (error) {
+            const msg = error && error.message ? error.message : String(error)
+            lines.push(`- (provider 枚举失败: ${msg})`)
+          }
+        }
+
         lines.push(
-          'allowlist 缓存于首次读取/授权时刷新；手工编辑文件需重启会话生效',
+          '自定义流程: mop_model_authorize(provider, model) 授权后，即可 mop_spawn_executor(provider=…, model=…) 使用；config.allowlist 种子条目重启后重新并入，永久移除须改配置',
         )
         return lines.join('\n')
       },

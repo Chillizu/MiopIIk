@@ -6,11 +6,18 @@ const { apply } = await import('../packages/dsh-miopiik-executor/index.js')
 function makeCtx() {
   const registered = []
   const starts = []
+  const listeners = {}
   const ctx = {
     tools: {
       register: (tool) => {
         registered.push(tool)
       },
+    },
+    // D32：动态默认依赖 agent/request waterfall 采样；真实宿主必有 events，
+    // 测试替身在此提供最小 on() 以便喂样本。
+    on: (event, fn) => {
+      ;(listeners[event] ??= []).push(fn)
+      return () => {}
     },
     subagents: {
       start: async (name, request) => {
@@ -25,7 +32,15 @@ function makeCtx() {
       },
     },
   }
-  return { ctx, registered, starts }
+  return { ctx, registered, starts, listeners }
+}
+
+// 模拟调用者在某会话上刚完成的一次 LLM 请求（waterfall next 返回其解析结果）。
+async function sampleCallerModel(listeners, sessionId, provider, model) {
+  await listeners['agent/request'][0](
+    { agent: { session: { header: { id: sessionId } } } },
+    async () => ({ provider, model }),
+  )
 }
 
 test('mop_spawn_executor passes model + toolFilter and returns output', async () => {
@@ -64,6 +79,88 @@ test('default model is flash', async () => {
   const tool = registered.find((t) => t.name === 'mop_spawn_executor')
   await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
   assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-flash')
+})
+
+test("D32: no explicit args inherits the caller's current model pair", async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  // 调用者（主会话 s1）刚用 kimi/k2 发过请求 → spawn 不带参数应整对继承。
+  await sampleCallerModel(listeners, 's1', 'kimi-coding', 'kimi-k2')
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.equal(starts[0].request.agentOptions.provider, 'kimi-coding')
+  assert.equal(starts[0].request.agentOptions.model, 'kimi-k2')
+})
+
+test('D32: sample follows the latest request (model switch mid-conversation)', async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await sampleCallerModel(listeners, 's1', 'kimi-coding', 'kimi-k2')
+  await sampleCallerModel(
+    listeners,
+    's1',
+    'deepseek-official',
+    'deepseek-v4-pro',
+  )
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-pro')
+})
+
+test('D32: explicit model keeps per-field Config fallback (no caller mixing)', async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await sampleCallerModel(listeners, 's1', 'kimi-coding', 'kimi-k2')
+  // 只给 model：provider 回退 Config 默认，而非调用者的 kimi-coding——
+  // 跨 provider 杂交（kimi provider + deepseek model 名）只会制造怪象。
+  await tool.execute(
+    { prompt: 'task', model: 'deepseek-v4-pro' },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.equal(starts[0].request.agentOptions.provider, 'deepseek-official')
+  assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-pro')
+})
+
+test('D32: unknown caller session (no sample) falls back to static default', async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await sampleCallerModel(listeners, 'someone-else', 'kimi-coding', 'kimi-k2')
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-flash')
+  assert.equal(starts[0].request.agentOptions.provider, 'deepseek-official')
+})
+
+test('D32: followCallerModel=false restores static default even with a sample', async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx, { followCallerModel: false })
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  await sampleCallerModel(listeners, 's1', 'kimi-coding', 'kimi-k2')
+  await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
+  assert.equal(starts[0].request.agentOptions.model, 'deepseek-v4-flash')
+  assert.equal(starts[0].request.agentOptions.provider, 'deepseek-official')
+})
+
+test('D32: caller sample map is FIFO-bounded', async () => {
+  const { ctx, registered, starts, listeners } = makeCtx()
+  apply(ctx)
+  for (let i = 0; i < 300; i++) {
+    await sampleCallerModel(listeners, `session-${i}`, `p${i}`, `m${i}`)
+  }
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  // 最老的 session-0..43 已被逐出；session-299 必须仍在。
+  await tool.execute(
+    { prompt: 'task' },
+    { agent: { session: { id: 'session-299' } } },
+  )
+  assert.equal(starts[0].request.agentOptions.model, 'm299')
+  // session-0 已逐出 → 静态默认。
+  await tool.execute(
+    { prompt: 'task' },
+    { agent: { session: { id: 'session-0' } } },
+  )
+  assert.equal(starts[1].request.agentOptions.model, 'deepseek-v4-flash')
 })
 
 test('long output is truncated with a pointer to the executor session', async () => {

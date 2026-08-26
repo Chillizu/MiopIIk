@@ -8,7 +8,7 @@ const { apply } = await import('../packages/dsh-miopiik-model-auth/index.js')
 
 const DEFAULT = { provider: 'deepseek-official', model: 'deepseek-v4-flash' }
 
-async function withCtx(files = {}) {
+async function withCtx(files = {}, seams = {}, config = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'mop-auth-'))
   const path = join(dir, 'model-allowlist.md')
   if (files.allowlist) await writeFile(path, files.allowlist, 'utf8')
@@ -18,14 +18,36 @@ async function withCtx(files = {}) {
     on: (event, fn) => {
       listeners[event] = fn
     },
-    get: (name) =>
-      name === 'agentDefaultModel'
-        ? { currentSelection: () => DEFAULT }
-        : undefined,
+    get: (name) => {
+      if (name === 'agentDefaultModel')
+        return { currentSelection: () => DEFAULT }
+      if (name in seams) return seams[name]
+      return undefined
+    },
     tools: { register: (t) => (tools[t.name] = t) },
   }
-  apply(ctx, { allowlistPath: path })
+  apply(ctx, { allowlistPath: path, ...config })
   return { dir, path, listeners, tools }
+}
+
+// D31：llm seam 替身——两个 provider，其一枚举正常、其二可按需注入失败。
+function fakeLlm({ failProvider = null } = {}) {
+  return {
+    listProviders: async () => [
+      { id: 'deepseek-official', name: 'DeepSeek' },
+      { id: 'kimi-coding', name: 'Kimi' },
+    ],
+    listModels: async (provider) => {
+      if (failProvider && provider === failProvider)
+        throw new Error('endpoint unreachable')
+      if (provider === 'deepseek-official')
+        return [
+          { provider, id: 'deepseek-v4-flash', name: 'Flash' },
+          { provider, id: 'deepseek-v4-pro', name: 'Pro' },
+        ]
+      return [{ provider, id: 'kimi-k2', name: 'K2' }]
+    },
+  }
 }
 
 function subagent(id = 'child-1') {
@@ -134,6 +156,72 @@ test('mop_model_list 显示默认 + allowlist', async () => {
   const out = await tools['mop_model_list'].execute()
   assert.match(out, /默认模型: deepseek-official\/deepseek-v4-flash/)
   assert.match(out, /deepseek-official\/deepseek-v4-pro/)
+})
+
+test('D31: list 枚举可用模型并标注 默认/已授权', async () => {
+  const { tools } = await withCtx(
+    { allowlist: 'deepseek-official/deepseek-v4-pro\n' },
+    { llm: fakeLlm() },
+  )
+  const out = await tools['mop_model_list'].execute()
+  assert.match(out, /可用模型:/)
+  // flash = 默认；pro = 已授权（allowlist）；kimi-k2 可用但未授权（无标注）。
+  assert.match(out, /- deepseek-official\/deepseek-v4-flash \[默认\]/)
+  assert.match(out, /- deepseek-official\/deepseek-v4-pro \[已授权\]/)
+  assert.match(out, /- kimi-coding\/kimi-k2\n/)
+})
+
+test('D31: llm seam 缺失时提示不可枚举且不崩', async () => {
+  const { tools } = await withCtx()
+  const out = await tools['mop_model_list'].execute()
+  assert.match(out, /llm 服务未挂载，无法枚举/)
+})
+
+test('D31: 单 provider 枚举失败被隔离，其它 provider 照常列出', async () => {
+  const { tools } = await withCtx(
+    {},
+    { llm: fakeLlm({ failProvider: 'kimi-coding' }) },
+  )
+  const out = await tools['mop_model_list'].execute()
+  assert.match(out, /kimi-coding: \(枚举失败: endpoint unreachable\)/)
+  assert.match(out, /deepseek-official\/deepseek-v4-flash/)
+})
+
+test('D31: config.allowlist 种子放行闸并出现在 list', async () => {
+  const { listeners, tools } = await withCtx(
+    {},
+    {},
+    { allowlist: ['acme-cloud/claude-fake'] },
+  )
+  const config = await listeners['agent/request'](
+    { agent: subagent() },
+    async () => ({ provider: 'acme-cloud', model: 'claude-fake' }),
+  )
+  assert.equal(config.model, 'claude-fake')
+  const listed = await tools['mop_model_list'].execute()
+  // 该用例无 llm seam：种子条目出现在「已授权」段（可用段标注由专门用例覆盖）。
+  assert.match(listed, /- acme-cloud\/claude-fake\n/)
+})
+
+test('D31: config.allowlist 非法条目在 apply 即抛错', async () => {
+  await assert.rejects(
+    () => withCtx({}, {}, { allowlist: ['no-slash-entry'] }),
+    /config\.allowlist 条目 "no-slash-entry" 非法/,
+  )
+})
+
+test('D31: revoke 种子条目进程内生效（重启后随配置重新并入）', async () => {
+  const { listeners, tools } = await withCtx({}, {}, { allowlist: ['a/b'] })
+  await tools['mop_model_revoke'].execute({ provider: 'a', model: 'b' })
+  // 同进程内走闸：revoke 后应拒绝。
+  await assert.rejects(
+    () =>
+      listeners['agent/request']({ agent: subagent() }, async () => ({
+        provider: 'a',
+        model: 'b',
+      })),
+    /未授权模型 a\/b/,
+  )
 })
 
 test('mop_model_revoke 从 allowlist 移除并同步缓存', async () => {

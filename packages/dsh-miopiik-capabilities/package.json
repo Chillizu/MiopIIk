@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-capabilities",
   "description": "Non-destructive DSH seam capability probe writing a two-evidence-level manifest (present vs invoked-ok). DSH seam 能力探测，输出现场/实调双证据能力清单",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "main": "index.js",
   "exports": {
