@@ -1,12 +1,16 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 export const name = 'dsh-miopiik-executor'
 export const inject = ['tools', 'subagents']
 
-// 默认策略（生产由 Loader 按 Config schema 填默认值；直调 apply 时此处兜底）。
-const DEFAULT_PROVIDER = 'deepseek-official'
-const DEFAULT_MODEL = 'deepseek-v4-flash'
+// 默认静态兜底常量（仅用于 Config schema 默认值；正常流程不可达——双给用 args，
+// 单给抛错，都不给走 policy/fail-closed，绝不静默落到一个幽灵模型）。
+// 指向本部署真实可用模型（与 mop_model_list 对齐），避免出现 deepseek-v4-* 这种不存在的默认值。
+const DEFAULT_PROVIDER = 'opencode-go'
+const DEFAULT_MODEL = 'mimo-v2.5'
 const DEFAULT_MAX_OUTPUT_CHARS = 4000
 
 export const Config = z.object({
@@ -16,10 +20,10 @@ export const Config = z.object({
   // strict：收紧执行层工具面（去 bash/write）。edit 保留——persona 硬规则 3 本就要求
   // 「只 append 不覆盖」，多轮追加靠 edit；strict 面向不可信任务/来宾场景。
   strict: z.boolean().default(false),
-  // D32 动态默认：spawn 未显式指定 model/provider 时，整对继承「调用者当下实际
-  // 在用的模型」（经 agent/request waterfall 采样），而非固定 Config 值。
-  // 主会话换模型、preset 行覆盖 planner=pro 等，执行层都自动跟随；置 false 回到静态默认。
-  followCallerModel: z.boolean().default(true),
+  // policyPath：审查层决策的执行层模型文件（默认 <workspace>/.dsh/memory/model-policy.md）。
+  // 当 mop_spawn_executor 被调用且未显式给 model+provider 时，从此文件读执行层模型兜底；
+  // 文件不存在或解析不出 → fail-closed 抛错（禁止静默继承/默认）。
+  policyPath: z.string().default('.dsh/memory/model-policy.md'),
 })
 
 const stringOutput = {
@@ -69,18 +73,22 @@ function textOf(blocks) {
     .join('')
 }
 
+// 结构强制「严禁 Emoji」（反馈 #4）：弱模型常不守 persona 的 Emoji 禁令，
+// 故在 executor 输出回传前剥掉 emoji，使执行层交付物不污染审查层上下文。
+// 仅剥符号 emoji，不动文本/标点/中文。
+const EMOJI_RE =
+  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{2700}-\u{27BF}]/gu
+function stripEmoji(s) {
+  return String(s).replace(EMOJI_RE, '')
+}
+
 export function apply(ctx, config = {}) {
-  const providerDefault = config.provider ?? DEFAULT_PROVIDER
-  const modelDefault = config.model ?? DEFAULT_MODEL
   const maxOutputChars = config.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS
-  const followCallerModel = config.followCallerModel !== false
   const toolFilter =
     config.strict === true ? STRICT_EXECUTOR_TOOL_FILTER : EXECUTOR_TOOL_FILTER
 
-  // D32 调用者模型采样：agent/request waterfall 里每次请求的 {provider,model}
-  // 按「发起会话 id」记录最近一次值。工具执行发生在调用者的两个 step 之间，
-  // 调用者必然刚发过请求，样本总是新鲜的。FIFO 上限防长驻进程缓慢泄漏；
-  // ctx.on 缺失（极简宿主/测试替身）只失去动态默认，静态回退链完整。
+  // 调用者模型采样：仅服务于显式 model='inherit' 逃生口（旧 D32 行为，默认关闭）。
+  // 不再作为静默默认——未指定模型时一律走 policy 或 fail-closed。
   const callerModels = new Map()
   const CALLER_MODELS_MAX = 256
   if (typeof ctx.on === 'function') {
@@ -102,36 +110,86 @@ export function apply(ctx, config = {}) {
     })
   }
 
-  // D32 模型解析优先级：
-  // 1) args 显式给出 provider/model 任一字段 → 按字段回退 Config 默认（与旧版一致，
-  //    不与调用者采样混搭——kimi provider 配 deepseek model 名这类杂交只会制造怪象）；
-  // 2) 未显式且 followCallerModel → 整对继承调用者当下模型；
-  // 3) 否则 Config 固定默认成对兜底。
-  function resolveModel(args, exec) {
-    if (args.provider || args.model || !followCallerModel) {
-      return {
-        provider: args.provider || providerDefault,
-        model: args.model || modelDefault,
-      }
+  // 解析 policy 文件里的执行层模型（审查层决策落点，约定每行 `provider/model`）。
+  function parsePolicyModel(raw) {
+    if (!raw) return null
+    for (const line of String(raw).split('\n')) {
+      const t = line.trim()
+      if (!t || t.startsWith('#')) continue
+      const m = t.match(/^([\w.-]+)\/([\w.:-]+)$/)
+      if (m) return { provider: m[1], model: m[2] }
     }
-    const session = exec && exec.agent && exec.agent.session
-    const callerId =
-      (session && session.header && session.header.id) ||
-      (session && session.id)
-    const sample = callerId ? callerModels.get(callerId) : undefined
-    if (sample) return sample
-    return { provider: providerDefault, model: modelDefault }
+    return null
+  }
+  function resolveWorkspaceRoot(exec) {
+    const s = exec && exec.agent && exec.agent.session
+    const cwd = s && ((s.header && s.header.cwd) || s.cwd)
+    return cwd || process.cwd()
+  }
+
+  // 模型解析契约（反馈 #1 核心修复：可预测、无静默继承、无杂交）：
+  // 1) model === 'inherit'（显式逃生口）→ 继承调用者当下模型；
+  // 2) model+provider 都给 → 直接用；
+  // 3) 只给其一 → 抛错（禁止 provider/model 杂交怪物，如 kimi provider + deepseek model）；
+  // 4) 都不给 → 读 policyPath 的执行层模型兜底；
+  // 5) 仍无 → fail-closed 抛错（强制审查层/规划层显式决策，杜绝意外模型）。
+  function resolveModel(args, exec) {
+    if (args.model === 'inherit') {
+      const session = exec && exec.agent && exec.agent.session
+      const callerId =
+        (session && session.header && session.header.id) ||
+        (session && session.id)
+      const sample = callerId ? callerModels.get(callerId) : undefined
+      if (!sample)
+        throw new Error(
+          'mop_spawn_executor: model="inherit" 但无调用者模型样本（调用者尚未发过请求？）',
+        )
+      return sample
+    }
+    if (args.model && args.provider)
+      return { provider: args.provider, model: args.model }
+    if (args.model || args.provider) {
+      throw new Error(
+        'mop_spawn_executor: model 与 provider 必须同时给出或同时省略（禁止只给其一造成 provider/model 杂交）；继承调用者模型请显式 model="inherit"',
+      )
+    }
+    try {
+      const raw = readFileSync(
+        join(resolveWorkspaceRoot(exec), config.policyPath),
+        'utf8',
+      )
+      const pm = parsePolicyModel(raw)
+      if (pm) return pm
+    } catch {
+      /* 文件不存在 / 解析失败 → 走 fail-closed */
+    }
+    throw new Error(
+      `mop_spawn_executor: 未指定执行层模型，且 ${config.policyPath} 无可用决策——` +
+        '必须显式传 model+provider，或先由审查层在 model-policy.md 落执行层模型决策',
+    )
   }
 
   ctx.tools.register(
     defineTool({
       name: 'mop_spawn_executor',
       description:
-        "Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors. model/provider optional: when both are omitted the child inherits the CALLER'S current model (dynamic default, Config.followCallerModel); when either is given, the missing field falls back to the configured default. timeoutMs optional (ms, hard timeout that aborts the child).",
+        "Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors. " +
+        "model + provider MUST be given together (no silent default, no partial pair, no hybrid). " +
+        "If both are omitted, the execution-layer model is read from <workspace>/.dsh/memory/model-policy.md (set by the review layer); if absent the call fails closed. " +
+        "model='inherit' is the ONLY way to deliberately inherit the caller's current model (cost amplification) and must be stated explicitly. " +
+        "timeoutMs optional (ms, hard timeout that aborts the child).",
       parameters: {
         prompt: { type: 'string', required: true },
-        model: { type: 'string' },
-        provider: { type: 'string' },
+        model: {
+          type: 'string',
+          description:
+            'Execution-layer model id. MUST be paired with provider. Omit BOTH to read the review layer\'s decision from model-policy.md, or set model="inherit" to use the caller\'s model. Never give only one of model/provider.',
+        },
+        provider: {
+          type: 'string',
+          description:
+            'Execution-layer provider id. MUST be paired with model. Omit BOTH to read model-policy.md, or set model="inherit" to use the caller\'s provider.',
+        },
         timeoutMs: {
           type: 'number',
           description:
@@ -253,7 +311,7 @@ export function apply(ctx, config = {}) {
             return `[aborted] executor cancelled${sessionTag}`
           }
 
-          const body = textOf(result.output)
+          const body = stripEmoji(textOf(result.output))
           const maxChars = maxOutputChars
           const truncated = body.length > maxChars
           const shown = truncated ? body.slice(0, maxChars) : body
