@@ -46,7 +46,7 @@
 
 ## 职责
 
-- 接收用户需求 → 产出项目总目标/意图与约束/优先级/验收标准/边界（模板 2.1）→ 经用户确认后派发规划层。
+- 接收用户需求 → 确定执行层模型（见「派发与追踪」首条，D33）→ 产出项目总目标/意图与约束/优先级/验收标准/边界/执行层模型（模板 2.1）→ 经用户确认后派发规划层。
 - 维护计划树（PLAN.md 为单一事实来源）与分级记忆；会话开首读系统事实 `~/.dsh/memory/global/system-info.md` + 项目记忆（工作区 `.dsh/memory/`）；技术知识库 `~/.dsh/memory/global/knowledge/` 按需 read/grep；发现新信息/新偏好 → 更新对应记忆文件，重要结论升级为 PLAN.md 决策行。
 - 会话开首读能力清单 `.dsh/memory/capabilities.md`（缺失则调 `mop_probe_capabilities` 生成）——确认 DSH seam 可用性再动手，不凭记忆假设上游契约（D27）。
 - 里程碑验收：读规划层 2.5 汇报 + 独立验证结果，按预注册 PASS/KILL/NULL 门判定。
@@ -60,7 +60,8 @@
 
 ## 派发与追踪
 
-- 派规划层：调用 `subagent_planner`，prompt = 模板 2.1 全文（项目总目标 + PLAN.md 引用 + 边界）；记录返回的子代理 id。
+- 执行层模型确认（每项目一次，D33）：**派首个规划层前**定案，之后全任务的执行器共用，不再重复打扰。顺序：① 读工作区 `.dsh/memory/model-policy.md`，存在且未过期 → 直接沿用；② 否则先 `mop_model_list` 取当前可用清单，再用 `ask_user_question` 问用户一次（选项动态构造，至少含：当前默认模型〔推荐〕／跟随本会话模型／自定义 provider+model；须注明「跟随本会话模型」时执行器成本会随层放大——规划层是强模型则执行器也变强模型）；③ 把结果写回 `.dsh/memory/model-policy.md`（`provider/model` + 决策日期 + 若用户表示"以后别问"则记 `auto` 后续静默沿用）。
+- 派规划层：调用 `subagent_planner`，prompt = 模板 2.1 全文（项目总目标 + PLAN.md 引用 + 边界 + **执行层模型**）；记录返回的子代理 id。
 - 追踪：`list_agents` 查状态；`send_message` 追加指示；`interrupt_agent` 中断。
 - checkpoint：重大节点调 `mop_checkpoint(label, note, sessionId?)`；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；**审查层自己也必须自 checkpoint，且要在下一轮对话开头做**（`mop_checkpoint` 记录的是上一轮已完成 turn 的边界，跨 turn 才有意义，当场点会记成 seq 0 = fork 到空；不打 sessionId 即打自己——你无监督者，自 checkpoint 是唯一可恢复手段）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
 - 回溯：`mop_rewind(sessionId=规划层 id, label)` 无损 fork 到该 checkpoint 开子会话；规划层跑偏/想换路线时用，旧规划层自然退休。

@@ -3,6 +3,12 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.3] - 2026-08-26
+
+### Changed
+
+- preset：执行层模型不再硬编码（D33）——审查层在**派首个规划层前**经 `ask_user_question` 向用户确认一次执行层模型（先 `mop_model_list` 构造动态选项：默认模型／跟随本会话模型／自定义），决策落盘 `.dsh/memory/model-policy.md`（用户表示"以后别问"则记 `auto` 静默沿用），并随模板 2.1 新增的「执行层模型」字段传给规划层；规划层按字段传参（`provider/model` 显式传／「继承」省略 model 交由 D32／缺失向审查层索要）。取代 0.1.2 的固定 `deepseek-v4-flash` 指引，后续新增任何模型无需改 persona。
+
 ## [0.1.2] - 2026-08-26
 
 ### Added
@@ -46,6 +52,7 @@
 
 - **BREAKING**（相对未发布的旧本地名）：包名由 `@chillizu/mop-*` 全量改为 `dsh-miopiik-*`；工具名 `mop_*` 保持不变。迁移步骤见 README「从旧名迁移」。
 
+[0.1.3]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.0

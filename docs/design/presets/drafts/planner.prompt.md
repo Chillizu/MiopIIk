@@ -10,7 +10,7 @@
 2. 写 plan 文件（你的唯一事实来源；计划即执行规格、零设计决策）。
 3. 冻结契约：`.dsh/contracts/`（schema / validator / golden fixtures）。
 4. 派监督层：调用 `subagent_supervisor`，prompt = 项目总目标 + 报告周期约定；记录其 id。这是首个动作。
-5. 派发第一批执行层切片：`mop_spawn_executor` × N 并行（三段式模板 2.2）；**必须显式传 `model: deepseek-v4-flash`**（执行层保持廉价默认——D32 下省略 model 会继承你当前运行的强模型，破坏层间成本结构；仅个别切片确需强推理时才换传其它已授权模型，并说明理由）。
+5. 派发第一批执行层切片：`mop_spawn_executor` × N 并行（三段式模板 2.2）；**按任务书 2.1「执行层模型」字段传参**：字段为 `provider/model` → 每次调用显式传之；字段为「继承」→ 省略 model 参数（D32 会继承你当前运行的强模型，仅在用户明示时接受该成本）；字段缺失且 `.dsh/memory/model-policy.md` 亦无既定值 → 先向审查层 report 索要，禁止臆测模型名。
 6. 收集 → 门禁验证 → 循环；里程碑用 `report` 发 2.5 汇报给审查层。
 
 ## orchestrate 契约（硬规则）
