@@ -1,27 +1,20 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { writeFileSync, unlinkSync } from 'node:fs'
-import { join } from 'node:path'
 
 const { apply } = await import('../packages/dsh-miopiik-executor/index.js')
 
-// 新契约下任何 spawn 都应显式带 model+provider（无静默默认）。
+// 新契约下任何 spawn 都应显式带 model+provider（零默认零兜底）。
 const EXEC_MODEL = { model: 'mimo-v2.5', provider: 'opencode-go' }
 
 function makeCtx() {
   const registered = []
   const starts = []
-  const listeners = {}
   const ctx = {
     tools: {
       register: (tool) => {
         registered.push(tool)
       },
       get: (name) => registered.find((t) => t.name === name),
-    },
-    on: (event, fn) => {
-      ;(listeners[event] ??= []).push(fn)
-      return () => {}
     },
     subagents: {
       start: async (name, request) => {
@@ -36,14 +29,7 @@ function makeCtx() {
       },
     },
   }
-  return { ctx, registered, starts, listeners }
-}
-
-async function sampleCallerModel(listeners, sessionId, provider, model) {
-  await listeners['agent/request'][0](
-    { agent: { session: { header: { id: sessionId } } } },
-    async () => ({ provider, model }),
-  )
+  return { ctx, registered, starts }
 }
 
 function getTool(ctx, registered) {
@@ -90,62 +76,37 @@ test('only provider given throws (no provider/model hybrid)', async () => {
   )
 })
 
-test('neither given and no policy fails closed', async () => {
-  const { ctx, registered } = makeCtx()
+test('neither given throws — no default, no policy-file lookup, no inheritance', async () => {
+  const { ctx, registered, starts } = makeCtx()
   const tool = getTool(ctx, registered)
   await assert.rejects(
     () =>
       tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } }),
-    /未指定执行层模型/,
+    /无默认模型、不读 model-policy.md、不继承调用者/,
   )
+  assert.equal(starts.length, 0, 'must not spawn anything')
 })
 
-test('neither given reads execution-layer model from policyPath', async () => {
-  // 走相对 policyPath（生产真实路径：<workspace>/.dsh/memory/model-policy.md），
-  // 避免沙箱 process.cwd() 无前导 / 时绝对路径被 path.join 错拼。
-  const policyRel = '.miopiik-test-policy.md'
-  const policyAbs = join(process.cwd(), policyRel)
-  writeFileSync(policyAbs, '# 决策\nopencode-go/hy3\n')
-  try {
-    const { ctx, registered, starts } = makeCtx()
-    apply(ctx, { policyPath: policyRel })
-    const tool = registered.find((t) => t.name === 'mop_spawn_executor')
-    await tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } })
-    assert.equal(starts[0].request.agentOptions.provider, 'opencode-go')
-    assert.equal(starts[0].request.agentOptions.model, 'hy3')
-  } finally {
-    try {
-      writeFileSync(policyAbs, '')
-      unlinkSync(policyAbs)
-    } catch {
-      // 清理失败不影响断言结果
-    }
-  }
-})
-
-test("model='inherit' uses the caller's sampled model pair", async () => {
-  const { ctx, registered, starts, listeners } = makeCtx()
+test("model='inherit' is rejected (inheritance channel removed)", async () => {
+  const { ctx, registered, starts } = makeCtx()
   const tool = getTool(ctx, registered)
-  await sampleCallerModel(listeners, 's1', 'opencode-go', 'hy3')
-  await tool.execute(
-    { prompt: 'task', model: 'inherit' },
-    { agent: { session: { id: 's1' } } },
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { prompt: 'task', model: 'inherit', provider: 'opencode-go' },
+        { agent: { session: { id: 's1' } } },
+      ),
+    /model="inherit" 通道已移除/,
   )
-  assert.equal(starts[0].request.agentOptions.provider, 'opencode-go')
-  assert.equal(starts[0].request.agentOptions.model, 'hy3')
-})
-
-test("model='inherit' with no sample throws", async () => {
-  const { ctx, registered } = makeCtx()
-  const tool = getTool(ctx, registered)
   await assert.rejects(
     () =>
       tool.execute(
         { prompt: 'task', model: 'inherit' },
         { agent: { session: { id: 's1' } } },
       ),
-    /model="inherit" 但无调用者模型样本/,
+    /model="inherit" 通道已移除/,
   )
+  assert.equal(starts.length, 0, 'must not spawn anything')
 })
 
 // ── 非模型契约回归（均显式带 model+provider）──────────────────────────────
@@ -371,21 +332,16 @@ test('mop_dispatch reuses subagent_planner when registered (no persona duplicati
   assert.ok(plannerArgs.prompt.includes('build x'))
 })
 
-test('mop_dispatch falls back to a direct strong-model planner spawn when subagent_planner absent', async () => {
+test('mop_dispatch fails closed when subagent_planner absent (no fallback spawn, no default model)', async () => {
   const { ctx, registered, starts } = makeCtx()
-  apply(ctx, {
-    orchestrationProvider: 'opencode-go',
-    orchestrationModel: 'hy3',
-  })
+  apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_dispatch')
-  const r = await tool.execute(
-    { task: 'build x' },
-    { agent: { session: { id: 's1' } } },
+  await assert.rejects(
+    () =>
+      tool.execute({ task: 'build x' }, { agent: { session: { id: 's1' } } }),
+    /subagent_planner 未注册——规划层模型唯一来源是 preset 的 tool-subagent-planner 行/,
   )
-  assert.match(r, /\[planner-session: /)
-  assert.equal(starts[0].request.agentOptions.provider, 'opencode-go')
-  assert.equal(starts[0].request.agentOptions.model, 'hy3')
-  assert.equal(starts[0].request.label, 'planner')
+  assert.equal(starts.length, 0, 'must not spawn a planner on its own')
 })
 
 test('mop_dispatch forwards an executionModel override to the planner', async () => {

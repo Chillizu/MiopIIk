@@ -3,6 +3,15 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.7] - 2026-08-27
+
+### Changed
+
+- `dsh-miopiik-executor`：**零默认零兜底**——删除 Config 的 provider/model 静态默认、`policyPath` 决策文件读取与 `model="inherit"` 调用者继承通道；`mop_spawn_executor` 模型来源唯一 = 调用方显式 `model`+`provider`，缺失即抛错。`model-policy.md` 降级为审查层决策记录（D33 落盘供模板引用），executor 不再自动读取。
+- `dsh-miopiik-executor`：`mop_dispatch` 去掉强模型兜底直 spawn（及 `orchestrationProvider/Model` 配置）——规划层模型唯一来源 = preset `tool-subagent-planner` 行显式配置；该行未注册即 fail-closed 报错，绝不伪造编排。
+- preset：模型流契约措辞全面去「默认/兜底/继承」——审查层任务分配、硬规则第 4 条（弱模型路径）、规划层工作顺序第 5 条、模型流向唯一契约段同步为显式传参口径；「规划层永远跑强模型」改为「规划层模型由 preset subagent_planner 行显式配置」。
+- 文档：review/planner 定稿源与 examples/miopiik 副本随措辞变更回填同步。
+
 ## [0.1.6] - 2026-08-27
 
 ### Added
