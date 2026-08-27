@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-executor",
   "description": "Controlled one-shot executor subagents with persona, tool allowlist, timeout and cancellation. 受控一次性执行层子代理（persona + 工具白名单 + 超时取消）",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "main": "index.js",
   "exports": {

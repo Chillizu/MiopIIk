@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik",
   "description": "MiOpIIk plugin suite for DeepSeek Harness: one-command install of all seven plugins plus the miopiik four-layer workflow preset initializer. MiOpIIk 套件包：一条命令装齐 7 插件并初始化四层工作流 preset",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -44,12 +44,12 @@
     }
   },
   "dependencies": {
-    "dsh-miopiik-capabilities": "^0.1.5",
-    "dsh-miopiik-executor": "^0.1.5",
-    "dsh-miopiik-learn": "^0.1.5",
-    "dsh-miopiik-magic-keywords": "^0.1.5",
-    "dsh-miopiik-model-auth": "^0.1.5",
-    "dsh-miopiik-run-stats": "^0.1.5",
-    "dsh-miopiik-tool-recovery": "^0.1.5"
+    "dsh-miopiik-capabilities": "^0.1.6",
+    "dsh-miopiik-executor": "^0.1.6",
+    "dsh-miopiik-learn": "^0.1.6",
+    "dsh-miopiik-magic-keywords": "^0.1.6",
+    "dsh-miopiik-model-auth": "^0.1.6",
+    "dsh-miopiik-run-stats": "^0.1.6",
+    "dsh-miopiik-tool-recovery": "^0.1.6"
   }
 }
