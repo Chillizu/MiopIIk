@@ -1,6 +1,6 @@
 {
-  "name": "dsh-miopiik-capabilities",
-  "description": "Non-destructive DSH seam capability probe writing a two-evidence-level manifest (present vs invoked-ok). DSH seam 能力探测，输出现场/实调双证据能力清单",
+  "name": "dsh-miopiik-recall",
+  "description": "MiOpIIk recall：会话级/工作目录级历史消息检索——查找本会话或本工作目录所有历史 agent 消息中包含查询词的行",
   "version": "0.1.8",
   "type": "module",
   "main": "index.js",
@@ -19,10 +19,14 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "*"
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
@@ -30,8 +34,8 @@
     "deepseek-harness",
     "dsh-plugin",
     "cordis",
-    "diagnostics",
-    "compatibility"
+    "recall",
+    "session-search"
   ],
   "license": "MIT",
   "engines": {
@@ -44,5 +48,5 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-capabilities#readme"
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-recall#readme"
 }

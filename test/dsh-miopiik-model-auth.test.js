@@ -8,7 +8,7 @@ const { apply } = await import('../packages/dsh-miopiik-model-auth/index.js')
 
 const DEFAULT = { provider: 'deepseek-official', model: 'deepseek-v4-flash' }
 
-async function withCtx(files = {}, seams = {}, config = {}) {
+async function withCtx(files = {}, seams = {}, config = {}, opts = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'mop-auth-'))
   const path = join(dir, 'model-allowlist.md')
   if (files.allowlist) await writeFile(path, files.allowlist, 'utf8')
@@ -26,7 +26,8 @@ async function withCtx(files = {}, seams = {}, config = {}) {
     },
     tools: { register: (t) => (tools[t.name] = t) },
   }
-  apply(ctx, { allowlistPath: path, ...config })
+  // opts.noPath：不注入绝对 allowlistPath → 走工作区默认路径契约（新契约用例）。
+  apply(ctx, opts.noPath ? config : { allowlistPath: path, ...config })
   return { dir, path, listeners, tools }
 }
 
@@ -282,4 +283,80 @@ test('mop_model_revoke 保留注释/其它条目与 list 前缀', async () => {
   assert.match(raw, /# comment/)
   assert.match(raw, /- a\/b/)
   assert.doesNotMatch(raw, /c\/d/)
+})
+
+// ── 工作区级授权（收紧后契约）：<cwd>/.dsh/memory/model-allowlist.md ──────────
+
+function execCwd(cwd) {
+  return { agent: { session: { header: { cwd } } } }
+}
+
+test('工作区级：authorize 默认落到 <cwd>/.dsh/memory/model-allowlist.md', async () => {
+  const { tools, dir } = await withCtx({}, {}, {}, { noPath: true })
+  const out = await tools['mop_model_authorize'].execute(
+    { provider: 'opencode-go', model: 'ws-model' },
+    execCwd(dir),
+  )
+  assert.match(out, /workspace allowlist:/)
+  const raw = await readFile(
+    join(dir, '.dsh', 'memory', 'model-allowlist.md'),
+    'utf8',
+  )
+  assert.match(raw, /opencode-go\/ws-model/)
+})
+
+test('工作区级：闸按 subagent 会话 cwd 解析 allowlist，两个工作区互相隔离', async () => {
+  const dirA = await mkdtemp(join(tmpdir(), 'mop-ws-a-'))
+  const dirB = await mkdtemp(join(tmpdir(), 'mop-ws-b-'))
+  const { tools, listeners } = await withCtx({}, {}, {}, { noPath: true })
+  // 在工作区 A 授权
+  await tools['mop_model_authorize'].execute(
+    { provider: 'openrouter', model: 'x/y' },
+    execCwd(dirA),
+  )
+  // A 的 subagent 放行
+  const agentA = {
+    session: { header: { id: 'child-a', origin: 'subagent', cwd: dirA } },
+  }
+  const cfg = await listeners['agent/request']({ agent: agentA }, async () => ({
+    provider: 'openrouter',
+    model: 'x/y',
+  }))
+  assert.equal(cfg.model, 'x/y')
+  // B 的 subagent 同一模型被拒（隔离）
+  const agentB = {
+    session: { header: { id: 'child-b', origin: 'subagent', cwd: dirB } },
+  }
+  await assert.rejects(
+    () =>
+      listeners['agent/request']({ agent: agentB }, async () => ({
+        provider: 'openrouter',
+        model: 'x/y',
+      })),
+    /未授权模型 openrouter\/x\/y/,
+  )
+})
+
+test('工作区级：list 标注 allowlist 文件路径', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mop-ws-l-'))
+  const { tools } = await withCtx({}, {}, {}, { noPath: true })
+  const out = await tools['mop_model_list'].execute(null, execCwd(dir))
+  assert.match(
+    out,
+    new RegExp(
+      `allowlist 文件: ${dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/.dsh/memory/model-allowlist.md`,
+    ),
+  )
+})
+
+test('工作区级：相对 allowlistPath 相对工作区根解析', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mop-ws-r-'))
+  const { tools } = await withCtx({}, {}, { allowlistPath: 'auth/custom.md' })
+  const out = await tools['mop_model_authorize'].execute(
+    { provider: 'a', model: 'b' },
+    execCwd(dir),
+  )
+  assert.match(out, /authorized: a\/b/)
+  const raw = await readFile(join(dir, 'auth', 'custom.md'), 'utf8')
+  assert.match(raw, /a\/b/)
 })

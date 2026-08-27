@@ -1,7 +1,17 @@
 # Changelog
 
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+
+## [0.1.8] - 2026-08-27
+
+### Changed
+
+- `dsh-miopiik-model-auth`：**授权收紧为工作区级**——allowlist 从全局文件（`~/.dsh/memory/global/model-allowlist.md`）迁至 `<workspace>/.dsh/memory/model-allowlist.md`；不同工作区互相隔离，同一模型换项目须重新授权；`mop_model_authorize/revoke/list` 均按当前会话 cwd 解析，`mop_model_list` 标注 allowlist 文件路径。`config.allowlistPath` 绝对路径仍可显式覆盖，相对路径相对工作区根解析。原全局文件已清空（撤回全部历史授权）。
+
+### Added
+
+- `dsh-miopiik-recall`（新包，套件第 8 个插件）：`mop_recall` 工具——会话级/工作目录级历史消息检索：扫描 `~/.dsh/sessions/<cwd-slug>/` 下所有会话日志（`.jsonl.zstd`，经 zstd 解压），返回 user/assistant 消息中匹配 query 的行（时间 + 会话 id + 角色 + 文本截断）与扫描/命中统计。参数：`query`（必填）、`scope`（workspace 默认 / session）、`caseSensitive`（默认忽略大小写）、`maxLines`（默认 50）。`Config.sessionsRoot` 可覆盖日志根。
 
 ## [0.1.7] - 2026-08-27
 

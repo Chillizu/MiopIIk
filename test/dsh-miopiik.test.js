@@ -14,6 +14,7 @@ const SEVEN = [
   'dsh-miopiik-capabilities',
   'dsh-miopiik-learn',
   'dsh-miopiik-run-stats',
+  'dsh-miopiik-recall',
 ]
 
 function walk(dir) {
