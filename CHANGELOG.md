@@ -3,6 +3,20 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.6] - 2026-08-27
+
+### Added
+
+- `dsh-miopiik-executor`：新增 `mop_dispatch` 工具（D36，弱模型分层唤起的结构性修复）——审查层（即便跑在弱模型上）收到实现类任务只需调这一条工具，即可在强模型上拉起规划层完成真正的规划/派发。优先复用 preset 的 `subagent_planner`（persona/toolFilter 不重复定义），未注册时兜底直 spawn 强模型规划层（新 Config `orchestrationProvider`/`orchestrationModel`，默认 `opencode-go/hy3`）；可选 `executionModel` 参数透传给规划层。
+- `dsh-miopiik-executor`：`mop_spawn_executor` 双参省略时从 `.dsh/memory/model-policy.md` 读执行层模型兜底（一行 `provider/model`），文件缺失或解析不出即 fail-closed 抛错——与 D32 显式传参契约闭环。
+
+### Changed
+
+- preset：审查层任务分配新增 D36——实现类任务第一动作必须是 `mop_dispatch(task)`，审查层本人绝不写实现代码；硬规则新增第 4 条「弱模型兜底」：弱模型不做多步编排，一条调用交强模型规划层接管。
+- preset：规划层工作顺序第 5 条改为每次 `mop_spawn_executor` **必须显式传 `model`+`provider`**（取自任务书 2.1，格式 `provider/model`）——executor 已 fail-closed，禁止省略、禁止臆测模型名。
+- preset：模型字面量全部改为本部署真实模型（常规子代理 `opencode-go/mimo-v2.5`、规划层 `hy3`），移除不存在的 `deepseek-*` 误导性默认值；「执行层模型确认」选项去掉「跟随本会话模型」（成本放大误导），仅保留默认/自定义。
+- 文档落地：examples/miopiik 副本与 `docs/design/presets/drafts/` 定稿源（review/planner）回填至与运行时副本逐字同步。
+
 ## [0.1.5] - 2026-08-26
 
 ### Added

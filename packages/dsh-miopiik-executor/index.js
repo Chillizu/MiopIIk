@@ -24,6 +24,11 @@ export const Config = z.object({
   // 当 mop_spawn_executor 被调用且未显式给 model+provider 时，从此文件读执行层模型兜底；
   // 文件不存在或解析不出 → fail-closed 抛错（禁止静默继承/默认）。
   policyPath: z.string().default('.dsh/memory/model-policy.md'),
+  // orchestrationProvider/Model：规划层（编排层）固定跑强模型，与执行层模型解耦。
+  // 弱模型审查层只需调 mop_dispatch 这一条工具，真正的编排由强模型规划层接管——
+  // 这是「低模型不会分层唤起」的结构性修复（反馈 #4）。
+  orchestrationProvider: z.string().default('opencode-go'),
+  orchestrationModel: z.string().default('hy3'),
 })
 
 const stringOutput = {
@@ -67,6 +72,26 @@ const STRICT_EXECUTOR_TOOL_FILTER = {
   allow: ['read', 'glob', 'grep', 'edit', 'todo_write'],
 }
 
+// 规划层踢出提示（mop_dispatch 复用 / 兜底）：精简版规划层指令。
+// 完整规划层 persona 定义在 preset 的 subagent_planner 行；mop_dispatch 优先复用之，
+// 此处仅作未注册场景下的兜底，避免编排失效。
+const PLANNER_KICKOFF = `# 规划层（Planner）系统提示（精简踢出版）
+
+你是**规划层（Planner）**：continuable 后台子代理。解读审查层下达的任务 → 写 plan 文件 → 冻结契约 .dsh/contracts/ → 派监督层 subagent_supervisor → 读 .dsh/memory/model-policy.md 的「执行层模型」并每次 mop_spawn_executor 显式传 model+provider 派发执行层 → 收集 → 门禁验证 → 里程碑 report 给审查层。你不写实现代码（trivial 小修除外）。证据优先、结论先行。`
+
+const PLANNER_TOOL_FILTER = {
+  deny: [
+    'ask_user_question',
+    'ralph',
+    'create_goal',
+    'get_goal',
+    'update_goal',
+    'web_search',
+    'mop_model_authorize',
+    'mop_model_revoke',
+  ],
+}
+
 function textOf(blocks) {
   return (blocks || [])
     .map((b) => (b && b.type === 'text' ? b.text : ''))
@@ -77,9 +102,12 @@ function textOf(blocks) {
 // 故在 executor 输出回传前剥掉 emoji，使执行层交付物不污染审查层上下文。
 // 仅剥符号 emoji，不动文本/标点/中文。
 const EMOJI_RE =
-  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{2700}-\u{27BF}]/gu
+  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}]/gu
+// 变体选择符（VS16 等）是单独不可见的组合字符，须与 emoji 分两次剥除——
+// 与 emoji 区间同处一个字符类会触发 no-misleading-character-class。
+const VARIATION_SELECTOR_RE = /[\u{FE00}-\u{FE0F}]/gu
 function stripEmoji(s) {
-  return String(s).replace(EMOJI_RE, '')
+  return String(s).replace(EMOJI_RE, '').replace(VARIATION_SELECTOR_RE, '')
 }
 
 export function apply(ctx, config = {}) {
@@ -173,11 +201,11 @@ export function apply(ctx, config = {}) {
     defineTool({
       name: 'mop_spawn_executor',
       description:
-        "Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors. " +
-        "model + provider MUST be given together (no silent default, no partial pair, no hybrid). " +
-        "If both are omitted, the execution-layer model is read from <workspace>/.dsh/memory/model-policy.md (set by the review layer); if absent the call fails closed. " +
+        'Spawn a one-shot executor subagent for one task slice and return its final output. Call N times in one turn for N parallel executors. ' +
+        'model + provider MUST be given together (no silent default, no partial pair, no hybrid). ' +
+        'If both are omitted, the execution-layer model is read from <workspace>/.dsh/memory/model-policy.md (set by the review layer); if absent the call fails closed. ' +
         "model='inherit' is the ONLY way to deliberately inherit the caller's current model (cost amplification) and must be stated explicitly. " +
-        "timeoutMs optional (ms, hard timeout that aborts the child).",
+        'timeoutMs optional (ms, hard timeout that aborts the child).',
       parameters: {
         prompt: { type: 'string', required: true },
         model: {
@@ -262,7 +290,8 @@ export function apply(ctx, config = {}) {
                 exec.agent &&
                 exec.agent.session &&
                 exec.agent.session.header &&
-                exec.agent.session.header.delegationDepth) ?? 0
+                exec.agent.session.header.delegationDepth) ??
+              0
             run = await ctx.subagents.start('spawn', {
               label: `executor:${model}`,
               prompt: [{ type: 'text', text: args.prompt }],
@@ -323,6 +352,59 @@ export function apply(ctx, config = {}) {
           if (timer !== null) clearTimeout(timer)
           if (isSignal) sourceSignal.removeEventListener('abort', forward)
         }
+      },
+    }),
+  )
+
+  // ── mop_dispatch：弱模型分层唤起的结构性修复（反馈 #4）──────────────────────
+  // 弱模型常「不会用 subagent / 不会分层唤起」：它不愿也不擅长多步编排。
+  // 本工具把"唤起规划层"降为一条极简调用——审查层（即便跑在弱模型上）只需调
+  // mop_dispatch(task)，由本工具在【强模型】上拉起规划层（continuable），
+  // 真正的编排交给强模型规划层完成。优先复用 preset 的 subagent_planner
+  // （其 persona/toolFilter/强模型在 preset 定义，无重复）；未注册时兜底直 spawn。
+  ctx.tools.register(
+    defineTool({
+      name: 'mop_dispatch',
+      description:
+        'Kick off the MiOpIIk planner for an implementation task. SINGLE trivial call: even a WEAK review-layer model only needs to call THIS to start layered orchestration — the planner is spawned on a STRONG model (orchestrationProvider/Model) and does the actual planning/dispatching. The review layer MUST call this as its first action on any implementation task instead of writing code itself.',
+      parameters: {
+        task: {
+          type: 'string',
+          required: true,
+          description: 'The user task / project goal to hand to the planner.',
+        },
+        executionModel: {
+          type: 'string',
+          description:
+            'Optional execution-layer model override (provider/model), forwarded to the planner.',
+        },
+      },
+      output: stringOutput,
+      async execute(args, exec) {
+        const task = args.task || ''
+        const note = args.executionModel
+          ? `\n\n# 执行层模型覆盖\n${args.executionModel}`
+          : ''
+        const promptText = `${PLANNER_KICKOFF}\n\n# 任务\n${task}${note}`
+        const plannerTool =
+          ctx.tools && typeof ctx.tools.get === 'function'
+            ? ctx.tools.get('subagent_planner')
+            : null
+        if (plannerTool && typeof plannerTool.execute === 'function') {
+          return plannerTool.execute({ prompt: promptText }, exec)
+        }
+        const run = await ctx.subagents.start('spawn', {
+          label: 'planner',
+          prompt: [{ type: 'text', text: promptText }],
+          parent: exec.agent,
+          agentOptions: {
+            provider: config.orchestrationProvider,
+            model: config.orchestrationModel,
+          },
+          persona: PLANNER_KICKOFF,
+          toolFilter: PLANNER_TOOL_FILTER,
+        })
+        return `[planner-session: ${run.id}]`
       },
     }),
   )

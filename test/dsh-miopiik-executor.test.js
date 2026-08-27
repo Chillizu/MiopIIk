@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync, unlinkSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { writeFileSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 
 const { apply } = await import('../packages/dsh-miopiik-executor/index.js')
@@ -18,6 +17,7 @@ function makeCtx() {
       register: (tool) => {
         registered.push(tool)
       },
+      get: (name) => registered.find((t) => t.name === name),
     },
     on: (event, fn) => {
       ;(listeners[event] ??= []).push(fn)
@@ -95,10 +95,7 @@ test('neither given and no policy fails closed', async () => {
   const tool = getTool(ctx, registered)
   await assert.rejects(
     () =>
-      tool.execute(
-        { prompt: 'task' },
-        { agent: { session: { id: 's1' } } },
-      ),
+      tool.execute({ prompt: 'task' }, { agent: { session: { id: 's1' } } }),
     /未指定执行层模型/,
   )
 })
@@ -120,7 +117,9 @@ test('neither given reads execution-layer model from policyPath', async () => {
     try {
       writeFileSync(policyAbs, '')
       unlinkSync(policyAbs)
-    } catch {}
+    } catch {
+      // 清理失败不影响断言结果
+    }
   }
 })
 
@@ -348,4 +347,62 @@ test('Config.strict=true drops bash/write from the executor tool face (edit kept
     'edit',
     'todo_write',
   ])
+})
+
+// ── mop_dispatch：弱模型分层唤起的结构性修复（反馈 #4）────────────────────────
+
+test('mop_dispatch reuses subagent_planner when registered (no persona duplication)', async () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  let plannerArgs = null
+  registered.push({
+    name: 'subagent_planner',
+    execute: async (a) => {
+      plannerArgs = a
+      return '[planner-session: fake]'
+    },
+  })
+  const tool = registered.find((t) => t.name === 'mop_dispatch')
+  const r = await tool.execute(
+    { task: 'build x' },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.equal(r, '[planner-session: fake]')
+  assert.ok(plannerArgs.prompt.includes('build x'))
+})
+
+test('mop_dispatch falls back to a direct strong-model planner spawn when subagent_planner absent', async () => {
+  const { ctx, registered, starts } = makeCtx()
+  apply(ctx, {
+    orchestrationProvider: 'opencode-go',
+    orchestrationModel: 'hy3',
+  })
+  const tool = registered.find((t) => t.name === 'mop_dispatch')
+  const r = await tool.execute(
+    { task: 'build x' },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.match(r, /\[planner-session: /)
+  assert.equal(starts[0].request.agentOptions.provider, 'opencode-go')
+  assert.equal(starts[0].request.agentOptions.model, 'hy3')
+  assert.equal(starts[0].request.label, 'planner')
+})
+
+test('mop_dispatch forwards an executionModel override to the planner', async () => {
+  const { ctx, registered } = makeCtx()
+  apply(ctx)
+  let plannerArgs = null
+  registered.push({
+    name: 'subagent_planner',
+    execute: async (a) => {
+      plannerArgs = a
+      return '[planner-session: fake]'
+    },
+  })
+  const tool = registered.find((t) => t.name === 'mop_dispatch')
+  await tool.execute(
+    { task: 'build x', executionModel: 'opencode-go/mimo-v2.5' },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.ok(plannerArgs.prompt.includes('opencode-go/mimo-v2.5'))
 })

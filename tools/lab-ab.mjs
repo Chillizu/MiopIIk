@@ -22,13 +22,15 @@ function load(path) {
     if (!s) continue
     try {
       out.push(JSON.parse(s))
-    } catch {}
+    } catch {
+      // 非 JSON 行跳过
+    }
   }
   return out
 }
 
 const EMOJI_RE =
-  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}]/gu
+  /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}]/gu
 
 function textOf(b) {
   if (!b || typeof b !== 'object') return ''
@@ -38,13 +40,16 @@ function textOf(b) {
     let a = b.arguments || ''
     try {
       a = JSON.stringify(JSON.parse(a), null, 0)
-    } catch {}
+    } catch {
+      // 参数非 JSON 时原样保留
+    }
     return ` [TOOL ${b.name}(${a})]`
   }
   return ''
 }
 function walk(msg, acc) {
-  for (const b of msg.content || []) if (typeof b === 'object') acc.push(textOf(b))
+  for (const b of msg.content || [])
+    if (typeof b === 'object') acc.push(textOf(b))
 }
 
 function analyze(path) {
@@ -66,18 +71,34 @@ function analyze(path) {
     if (t === 'assistant/message') {
       const msg = e.data?.message
       const src = msg?.source || {}
-      if (src.model) models[`${src.provider}/${src.model}`] = (models[`${src.provider}/${src.model}`] || 0) + 1
+      if (src.model)
+        models[`${src.provider}/${src.model}`] =
+          (models[`${src.provider}/${src.model}`] || 0) + 1
       const acc = []
       walk(msg, acc)
       const full = acc.join('\n')
       allText.push(full)
-      if (full.startsWith('Ciallo') || full.slice(0, 40).includes('Ciallo~~')) ciallo++
+      if (full.startsWith('Ciallo') || full.slice(0, 40).includes('Ciallo~~'))
+        ciallo++
       if (EMOJI_RE.test(full)) emoji++
-      if (full.includes('[OK]') || full.includes('[FAIL]') || full.includes('[*]')) okfail++
+      if (
+        full.includes('[OK]') ||
+        full.includes('[FAIL]') ||
+        full.includes('[*]')
+      )
+        okfail++
       for (const b of msg.content || []) {
         if (b?.type === 'tool-call') {
           const n = b.name
-          if (['mop_spawn_executor', 'subagent', 'subagent_fork', 'subagent_planner', 'subagent_supervisor'].includes(n)) {
+          if (
+            [
+              'mop_spawn_executor',
+              'subagent',
+              'subagent_fork',
+              'subagent_planner',
+              'subagent_supervisor',
+            ].includes(n)
+          ) {
             subs++
             subBreakdown[n] = (subBreakdown[n] || 0) + 1
           }
@@ -96,7 +117,8 @@ function analyze(path) {
     }
   }
   const joined = allText.join('\n')
-  const completed = /smoke\.mjs/.test(joined) && /(PASS|通过|exit code 0|全部通过)/.test(joined)
+  const completed =
+    /smoke\.mjs/.test(joined) && /(PASS|通过|exit code 0|全部通过)/.test(joined)
   return {
     models,
     subs,
@@ -116,9 +138,15 @@ function analyze(path) {
 
 function fmt(r) {
   return {
-    '模型': Object.keys(r.models).join(', ') || '(无)',
-    '子代理调用': r.subs + (Object.keys(r.subBreakdown).length ? ` (${Object.entries(r.subBreakdown).map(([k, v]) => `${k}:${v}`).join(' ')})` : ''),
-    'llm重试': r.retries,
+    模型: Object.keys(r.models).join(', ') || '(无)',
+    子代理调用:
+      r.subs +
+      (Object.keys(r.subBreakdown).length
+        ? ` (${Object.entries(r.subBreakdown)
+            .map(([k, v]) => `${k}:${v}`)
+            .join(' ')})`
+        : ''),
+    llm重试: r.retries,
     '中止/阻塞': `${r.aborted}/${r.blocked}`,
     'Ciallo/Emoji/[OK·FAIL]': `${r.ciallo}/${r.emoji}/${r.okfail}`,
     'token(in/out)': `${r.tokIn}/${r.tokOut}`,
@@ -128,16 +156,33 @@ function fmt(r) {
 
 function printTable(title, rows) {
   console.log(`\n=== ${title} ===`)
-  const keys = ['模型', '子代理调用', 'llm重试', '中止/阻塞', 'Ciallo/Emoji/[OK·FAIL]', 'token(in/out)', '完成?']
+  const keys = [
+    '模型',
+    '子代理调用',
+    'llm重试',
+    '中止/阻塞',
+    'Ciallo/Emoji/[OK·FAIL]',
+    'token(in/out)',
+    '完成?',
+  ]
   const nameW = 22
   const lines = rows.map(([name, r]) => [name, fmt(r)])
   const colW = {}
-  for (const k of keys) colW[k] = Math.max(k.length, ...lines.map(([, r]) => String(r[k]).length))
-  const header = [('会话').padEnd(nameW), ...keys.map((k) => k.padEnd(colW[k]))].join(' | ')
+  for (const k of keys)
+    colW[k] = Math.max(k.length, ...lines.map(([, r]) => String(r[k]).length))
+  const header = [
+    '会话'.padEnd(nameW),
+    ...keys.map((k) => k.padEnd(colW[k])),
+  ].join(' | ')
   console.log(header)
   console.log('-'.repeat(header.length))
   for (const [name, r] of lines) {
-    console.log([name.padEnd(nameW), ...keys.map((k) => String(r[k]).padEnd(colW[k]))].join(' | '))
+    console.log(
+      [
+        name.padEnd(nameW),
+        ...keys.map((k) => String(r[k]).padEnd(colW[k])),
+      ].join(' | '),
+    )
   }
 }
 
@@ -170,6 +215,8 @@ if (Object.keys(groups).length) {
   const rows = positional.map((p) => [p.split('/').pop(), analyze(p)])
   printTable('会话', rows)
 } else {
-  console.error('用法: node tools/lab-ab.mjs <session.jsonl> ... | --group name=paths,...')
+  console.error(
+    '用法: node tools/lab-ab.mjs <session.jsonl> ... | --group name=paths,...',
+  )
   process.exit(1)
 }
