@@ -233,7 +233,7 @@
         backgroundMode: continuable
         agentOptions:
           provider: *dsh-provider
-          model: hy3 # 规划层强模型：唯一手写处（弱模型实验时只改这里；须为本部署真实模型）
+          model: &planner-model hy3 # 规划层模型：唯一手写处（弱模型实验时只改这里；须为本部署真实模型）；mop_dispatch 行经锚点 *planner-model 跟随
         persona: |
           # 规划层（Planner）系统提示
 
@@ -294,6 +294,30 @@
             # 模型授权面只属于用户主会话（model-auth 边界）：规划层不得自授模型。
             - mop_model_authorize
             - mop_model_revoke
+
+    # ── mop_dispatch：弱模型分层唤起的结构性修复（D36，0.1.9 迁移自 executor 插件）────
+    # 与 subagent_planner 同级同机制：persona/模型/toolFilter 全部在此行显式配置。
+    # 弱模型审查层只需调 mop_dispatch(task) 这一条工具：以本行 agentOptions（=规划层模型锚点）
+    # 拉起精简规划层会话，真正的规划/派发由规划层完成。零默认零兜底——模型来源唯一 =
+    # 本行显式配置；无任何代码内默认。executionModel 参数（provider/model）由审查层透传时，
+    # 规划层应优先采用（写进任务书 2.1 并每次 mop_spawn_executor 显式传参）。
+    - id: tool-subagent-dispatch
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: mop_dispatch
+        backgroundMode: continuable
+        agentOptions:
+          provider: *dsh-provider
+          model: *planner-model
+        persona: |
+          # 规划层（Planner）系统提示（mop_dispatch 唤起版）
+
+          你是**规划层（Planner）**：continuable 后台子代理，由审查层以 mop_dispatch(task) 唤起。
+          解读任务 → 写 plan 文件 → 冻结契约 .dsh/contracts/ → 派监督层 subagent_supervisor（首个动作）→
+          每次 mop_spawn_executor **显式传 model+provider**（取自任务中的执行层模型，格式 provider/model；
+          缺失先 report 向审查层索要，禁止臆测）派发执行层 ×N 并行 → 收集 → 门禁验证 → 里程碑 report 给审查层。
+          你不写实现代码（trivial 小修除外）。证据优先、结论先行。
 
     - id: tool-subagent-supervisor
       name: '@deepseek-ai/dsh-tool-subagent'
@@ -443,3 +467,10 @@
 # tokenUsage 累计桶（live-first + coldSnapshot 兜底），供实验门/审查层逐 run 计量 token。
 - id: dsh-miopiik-run-stats
   name: 'dsh-miopiik-run-stats'
+
+# ── recall ───────────────────────────────────────────────────────────────────
+
+# MiOpIIk recall（0.1.8）：mop_recall(query, scope=workspace|session, …) 检索
+# ~/.dsh/sessions 下本工作目录历史会话日志（.jsonl.zstd，经 zstd 解压）中含查询词的行。
+- id: dsh-miopiik-recall
+  name: 'dsh-miopiik-recall'

@@ -1,6 +1,6 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
-import { readFile, appendFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, appendFile, writeFile, mkdir, stat } from 'node:fs/promises'
 import { join, dirname, isAbsolute } from 'node:path'
 
 export const name = 'dsh-miopiik-model-auth'
@@ -36,9 +36,16 @@ function workspaceRootOf(scope) {
   return (header && header.cwd) || (session && session.cwd) || process.cwd()
 }
 
+// 进程级共享缓存：preset 在【每个 agent 上下文】都会实例化本插件（工具面=审查层实例、
+// 闸面=子代理实例），若缓存是实例字段，授权只更新工具面实例，子代理实例仍持有旧快照，
+// 导致「authorize 后闸仍拒」（0.1.8 验收 B3）。缓存必须跨实例共享、以文件 mtime 失效，
+// 保证工具面与闸面同源；configSeed 仍按实例各自并集（种子是装配期静态值）。
+const sharedCache = new Map() // path -> { mtimeMs, set }
+// 种子条目被 revoke 后的进程内屏蔽集（D31 语义：重启后随配置重新并入）——同样跨实例共享。
+const sharedRevokedSeeds = new Set()
+
 export function apply(ctx, config = {}) {
-  // 每个 allowlist 路径一个缓存（工作区级：不同 cwd 解析到不同文件）。
-  const cache = new Map()
+  // 每个 allowlist 路径一个缓存项（工作区级：不同 cwd 解析到不同文件）。
   const allowlistPathFor = (scope) => {
     const given = config.allowlistPath
     if (given) {
@@ -79,7 +86,17 @@ export function apply(ctx, config = {}) {
   }
 
   async function loadAllowlist(path) {
-    if (cache.has(path)) return cache.get(path)
+    // mtime 失效（轻量 stat）：文件被本实例或其他实例改写后强制重读，
+    // 避免任一面持有陈旧快照。stat 失败（文件不存在）= 重建空集并记录 mtime 0。
+    let mtime = 0
+    try {
+      const st = await stat(path)
+      mtime = st.mtimeMs
+    } catch {
+      /* 文件不存在 = 空 allowlist */
+    }
+    const hit = sharedCache.get(path)
+    if (hit && hit.mtimeMs === mtime) return hit.set
     let raw = ''
     try {
       raw = await readFile(path, 'utf8')
@@ -93,9 +110,7 @@ export function apply(ctx, config = {}) {
         .filter((l) => l && !l.startsWith('#'))
         .map((l) => l.replace(/^-\s*/, '')),
     )
-    // Config.allowlist 种子与文件并集（D31）：种子条目与手工授权同权。
-    for (const k of configSeed) set.add(k)
-    cache.set(path, set)
+    sharedCache.set(path, { mtimeMs: mtime, set })
     return set
   }
 
@@ -112,7 +127,14 @@ export function apply(ctx, config = {}) {
     const key = `${provider}/${model}`
     const dk = defaultKey()
     if (dk !== null && key === dk) return true
-    return (await loadAllowlist(path)).has(key)
+    const set = await loadAllowlist(path)
+    if (set.has(key)) return true
+    // configSeed 是装配期静态值，不入共享缓存，按实例并集（D31）；
+    // revoke 过的种子条目在 sharedRevokedSeeds 中屏蔽，直到重授权/重启。
+    for (const k of configSeed) {
+      if (k === key && !sharedRevokedSeeds.has(k)) return true
+    }
+    return false
   }
 
   // ── 硬闸：agent/request 全局 waterfall（覆盖所有 subagent 派发路径） ──
@@ -175,6 +197,7 @@ export function apply(ctx, config = {}) {
           const sep = raw && !raw.endsWith('\n') ? '\n' : ''
           await appendFile(path, `${sep}${key}\n`, 'utf8')
           set.add(key)
+          sharedRevokedSeeds.delete(key)
           return `authorized: ${key} (workspace allowlist: ${path})`
         })
       },
@@ -192,13 +215,17 @@ export function apply(ctx, config = {}) {
       async execute(_args, exec) {
         const path = allowlistPathFor(exec)
         const set = await loadAllowlist(path)
+        const all = new Set(set)
+        for (const k of configSeed) {
+          if (!sharedRevokedSeeds.has(k)) all.add(k)
+        }
         const dk = defaultKey()
         const lines = [
           `默认模型: ${dk ?? '(无)'}`,
           `allowlist 文件: ${path}`,
-          `已授权 (${set.size}):`,
+          `已授权 (${all.size}):`,
         ]
-        for (const k of [...set].sort()) lines.push(`- ${k}`)
+        for (const k of [...all].sort()) lines.push(`- ${k}`)
 
         // 可用模型枚举（D31）：llm 是可选 seam，懒 ctx.get 而非 inject（P2-4）——
         // 缺失时只失去发现面，授权闸完整工作。单 provider 枚举失败不拖垮整体，
@@ -224,7 +251,7 @@ export function apply(ctx, config = {}) {
                 const key = `${m.provider ?? p.id}/${m.id}`
                 const tags = []
                 if (key === dk) tags.push('默认')
-                if (set.has(key)) tags.push('已授权')
+                if (all.has(key)) tags.push('已授权')
                 lines.push(
                   `- ${key}${tags.length ? ` [${tags.join('/')}]` : ''}`,
                 )
@@ -269,7 +296,10 @@ export function apply(ctx, config = {}) {
           }
           const path = allowlistPathFor(exec)
           const set = await loadAllowlist(path)
-          if (!set.has(key)) return `not authorized: ${key}`
+          const isSeed = configSeed.has(key)
+          if (!set.has(key) && !isSeed) return `not authorized: ${key}`
+          // 种子条目：进程内屏蔽（共享集），文件行按需删除。
+          if (isSeed) sharedRevokedSeeds.add(key)
           let raw = ''
           try {
             raw = await readFile(path, 'utf8')

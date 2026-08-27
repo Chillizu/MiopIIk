@@ -58,12 +58,10 @@ const STRICT_EXECUTOR_TOOL_FILTER = {
   allow: ['read', 'glob', 'grep', 'edit', 'todo_write'],
 }
 
-// 规划层踢出提示（mop_dispatch 组装任务 prompt 用）：精简版规划层指令。
-// 完整规划层 persona 定义在 preset 的 subagent_planner 行；mop_dispatch 只复用
-// subagent_planner 这一个来源——没有注册行就没有规划层，直接 fail-closed 报错。
-const PLANNER_KICKOFF = `# 规划层（Planner）系统提示（精简踢出版）
-
-你是**规划层（Planner）**：continuable 后台子代理。解读审查层下达的任务 → 写 plan 文件 → 冻结契约 .dsh/contracts/ → 派监督层 subagent_supervisor → 按任务书 2.1「执行层模型」字段每次 mop_spawn_executor 显式传 model+provider 派发执行层 → 收集 → 门禁验证 → 里程碑 report 给审查层。你不写实现代码（trivial 小修除外）。证据优先、结论先行。`
+// 注意：mop_dispatch 不再注册自本插件——它由 preset 的 tool-subagent-dispatch 行装配
+// （与 subagent_planner 同级同机制：persona/模型/toolFilter 全部显式配置于 preset）。
+// 迁移原因：executor 插件实例与 preset 工具行分属不同注册作用域，tools.get('subagent_planner')
+// 拿不到跨作用域工具（0.1.8 验收 C2：mop_dispatch 报「subagent_planner 未注册」）。
 
 function textOf(blocks) {
   return (blocks || [])
@@ -229,19 +227,28 @@ export function apply(ctx, config = {}) {
           const sessionTag = `\n[executor-session: ${run.id}]`
 
           let result
-          if (timeoutPromise !== null) {
-            const raced = await Promise.race([
-              run.result,
-              timeoutPromise.then(() => ({ __timedOut: true })),
-            ])
-            if (raced && raced.__timedOut) {
-              // 超时先到：立即返回，绝不继续无限等待 run.result（覆盖 provider 漏接 abort 的竞态）。
-              run.result.catch(() => {}) // 防超时后 run.result 迟到 reject → unhandled rejection
-              return `[aborted] executor timed out after ${timeoutMs}ms${sessionTag}`
+          try {
+            if (timeoutPromise !== null) {
+              const raced = await Promise.race([
+                run.result,
+                timeoutPromise.then(() => ({ __timedOut: true })),
+              ])
+              if (raced && raced.__timedOut) {
+                // 超时先到：立即返回，绝不继续无限等待 run.result（覆盖 provider 漏接 abort 的竞态）。
+                run.result.catch(() => {}) // 防超时后 run.result 迟到 reject → unhandled rejection
+                return `[aborted] executor timed out after ${timeoutMs}ms${sessionTag}`
+              }
+              result = raced
+            } else {
+              result = await run.result
             }
-            result = raced
-          } else {
-            result = await run.result
+          } catch (error) {
+            // 子代理未发布成功或会话失败（含模型闸拒绝）：错误原因必须回传调用者，
+            // 不能只存在于子会话日志（0.1.8 验收 B1：闸拒文案丢失，工具面只见空 [error]）。
+            const msg = error && error.message ? error.message : String(error)
+            throw new Error(
+              `executor 子代理失败（见子会话 ${run.id}）: ${msg || '(无错误详情)'}`,
+            )
           }
 
           // timer 已触发时优先报 timeout：provider 若正确桥接 abort，run.result 会
@@ -266,52 +273,6 @@ export function apply(ctx, config = {}) {
           if (timer !== null) clearTimeout(timer)
           if (isSignal) sourceSignal.removeEventListener('abort', forward)
         }
-      },
-    }),
-  )
-
-  // ── mop_dispatch：弱模型分层唤起的结构性修复（反馈 #4）──────────────────────
-  // 弱模型常「不会用 subagent / 不会分层唤起」：它不愿也不擅长多步编排。
-  // 本工具把"唤起规划层"降为一条极简调用——审查层（即便跑在弱模型上）只需调
-  // mop_dispatch(task)，真正的编排交给规划层完成。
-  // 零默认零兜底：规划层模型**唯一来源** = preset 的 subagent_planner 行（显式配置，
-  // persona/toolFilter/模型全部在该行定义，本插件不重复、不覆盖、不直 spawn）。
-  // subagent_planner 未注册 = 预设未装配，直接 fail-closed 报错，绝不伪造编排。
-  ctx.tools.register(
-    defineTool({
-      name: 'mop_dispatch',
-      description:
-        "Kick off the MiOpIIk planner for an implementation task. SINGLE trivial call: even a WEAK review-layer model only needs to call THIS to start layered orchestration. The planner runs on the model configured in the preset's subagent_planner row (explicit config, the sole model source — no default, no fallback, no override). If that row is not registered the call fails: fix the preset instead. The review layer MUST call this as its first action on any implementation task instead of writing code itself.",
-      parameters: {
-        task: {
-          type: 'string',
-          required: true,
-          description: 'The user task / project goal to hand to the planner.',
-        },
-        executionModel: {
-          type: 'string',
-          description:
-            'Optional execution-layer model override (provider/model), forwarded to the planner; it will be passed to mop_spawn_executor by the planner for every executor spawn.',
-        },
-      },
-      output: stringOutput,
-      async execute(args, exec) {
-        const task = args.task || ''
-        const note = args.executionModel
-          ? `\n\n# 执行层模型覆盖\n${args.executionModel}`
-          : ''
-        const promptText = `${PLANNER_KICKOFF}\n\n# 任务\n${task}${note}`
-        const plannerTool =
-          ctx.tools && typeof ctx.tools.get === 'function'
-            ? ctx.tools.get('subagent_planner')
-            : null
-        if (!plannerTool || typeof plannerTool.execute !== 'function') {
-          throw new Error(
-            'mop_dispatch: subagent_planner 未注册——规划层模型唯一来源是 preset 的 tool-subagent-planner 行（显式配置）；' +
-              '本插件无默认模型、无直 spawn 兜底。请检查 preset 装配后重试（模型仍须先 mop_model_authorize 入 allowlist）。',
-          )
-        }
-        return plannerTool.execute({ prompt: promptText }, exec)
       },
     }),
   )

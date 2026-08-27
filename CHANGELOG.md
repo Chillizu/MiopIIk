@@ -3,6 +3,15 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.9] - 2026-08-27
+
+### Fixed
+
+- `dsh-miopiik-model-auth`：**授权对闸门即时生效（0.1.8 验收 B3）**——preset 在每 agent 上下文实例化插件，原实例级缓存导致「授权只更新工具面实例、子代理闸面实例仍持旧快照」。改为进程级共享缓存 + 文件 mtime 失效，工具面与闸面同源；种子条目 revoke 的进程内屏蔽同样跨实例共享。
+- `dsh-miopiik-executor`：**子代理失败原因回传（B1）**——闸拒/会话失败不再以空 `[error]` 消失，错误 message + 子会话 id 一并返回调用者。
+- `dsh-miopiik-executor`：**mop_dispatch 迁出插件、改由 preset 装配（C2）**——executor 插件实例与 preset 工具行分属不同注册作用域，`tools.get('subagent_planner')` 跨作用域取不到，导致「规划层未注册」。现由 preset 新增 `tool-subagent-dispatch` 行（与 subagent_planner 同级同机制：persona/模型/toolFilter 全在 preset 显式配置，规划层模型经 `&planner-model` 锚点与 planner 行同源，仍零默认零兜底）。
+- `dsh-miopiik` preset：**补装配 `dsh-miopiik-recall` 行（D）**——0.1.8 仅更新了聚合 patch，preset 漏装导致 mop_recall 工具缺席；另补 `dsh-miopiik-recall/cordis.patch.yml` 供逐包安装路径使用。
+
 ## [0.1.8] - 2026-08-27
 
 ### Changed
