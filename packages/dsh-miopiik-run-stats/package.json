@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-run-stats",
   "description": "Programmatic token usage egress reading session cumulative usage buckets (uncached/cacheRead/cacheWrite/output). 会话累计 token 四桶可编程出口",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "main": "index.js",
   "exports": {

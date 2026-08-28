@@ -474,3 +474,13 @@
 # ~/.dsh/sessions 下本工作目录历史会话日志（.jsonl.zstd，经 zstd 解压）中含查询词的行。
 - id: dsh-miopiik-recall
   name: 'dsh-miopiik-recall'
+
+# ── checkpoint ───────────────────────────────────────────────────────────────
+
+# MiOpIIk 里程碑自动检查点（0.1.13）：根会话每轮关闭（agent/turn-stopping）时自动
+# 追加一行到 <cwd>/.dsh/memory/checkpoints.md（auto-turn / auto-error），由结构事件
+# 驱动而非 persona 约束——弱模型不守提示词规则，记忆落盘必须钉死在事件上。
+# Scoped<Agent> 作用域投递：本实例只收自己会话的事件；delegationDepth!=0（子代理）
+# 的轮次不落盘，防 executor 高频轮次冲成噪音。手动 mop_checkpoint 保留为显式里程碑。
+- id: dsh-miopiik-checkpoint
+  name: 'dsh-miopiik-checkpoint'

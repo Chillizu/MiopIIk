@@ -1,6 +1,6 @@
 {
-  "name": "dsh-miopiik-capabilities",
-  "description": "Non-destructive DSH seam capability probe writing a two-evidence-level manifest (present vs invoked-ok). DSH seam 能力探测，输出现场/实调双证据能力清单",
+  "name": "dsh-miopiik-checkpoint",
+  "description": "MiOpIIk 里程碑自动检查点：根会话每轮关闭时自动把一行恢复点追加到 .dsh/memory/checkpoints.md，由 agent/turn-stopping 结构事件驱动，不依赖会话自觉",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
@@ -19,10 +19,10 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "*"
+    "@deepseek-ai/schemastery": "*"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-tools": {
+    "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
@@ -30,8 +30,8 @@
     "deepseek-harness",
     "dsh-plugin",
     "cordis",
-    "diagnostics",
-    "compatibility"
+    "checkpoint",
+    "memory"
   ],
   "license": "MIT",
   "engines": {
@@ -44,5 +44,5 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-capabilities#readme"
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-checkpoint#readme"
 }
