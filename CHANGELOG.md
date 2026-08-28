@@ -3,6 +3,12 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.11] - 2026-08-28
+
+### Fixed
+
+- `dsh-miopiik-executor`：**B1 真因修复（第三轮，0.1.10 仍未生效的原因找到）**——子代理失败并不是 reject：DSH 以 `stopReason='error'` 的**成功 resolve** 返回失败结果（真实拒绝文案写在子会话日志的 turn/end error）。0.1.9/0.1.10 的 catch 只拦 reject，拦不到失败结果，故空 `[error]` 依旧。现在在正常返回路径上显式判定 `stopReason ∈ {error, failed}`，输出可读失败文案（stopReason + 子会话 id + result.error/message 原因，缺失时给「见子会话日志（常见：模型闸拒绝/深度超限/工具限制）」指引）。新增 2 条 stopReason=error 回归测试。
+
 ## [0.1.10] - 2026-08-28
 
 ### Fixed

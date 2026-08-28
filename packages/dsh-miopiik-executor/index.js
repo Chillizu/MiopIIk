@@ -273,6 +273,19 @@ export function apply(ctx, config = {}) {
           if (cancelled) {
             return `[aborted] executor cancelled${sessionTag}`
           }
+          // 子代理以失败态 resolve（stopReason='error'）而非 reject——0.1.8/0.1.9/0.1.10
+          // 验收 B1 连续两次「空 [error]」的真因：catch 只拦 reject，拦不到失败结果。
+          // 失败原因（如模型闸拒绝文案）在子会话日志；result.error/message 存在则拼入。
+          if (result.stopReason === 'error' || result.stopReason === 'failed') {
+            const reason = [
+              result.error && (result.error.message || String(result.error)),
+              typeof result.message === 'string' && result.message,
+            ].find((x) => x && x !== 'Error')
+            return (
+              `[error] executor 子代理失败（stopReason=${result.stopReason}，见子会话 ${run.id}）: ` +
+              (reason || '见子会话日志（常见：模型闸拒绝、深度超限、工具限制）')
+            )
+          }
 
           const body = stripEmoji(textOf(result.output))
           const maxChars = maxOutputChars

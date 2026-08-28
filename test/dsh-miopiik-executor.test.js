@@ -309,3 +309,49 @@ test('Config.strict=true drops bash/write from the executor tool face (edit kept
     'todo_write',
   ])
 })
+
+// ── B1 真因回归：子代理以失败态 resolve（stopReason='error'）而非 reject ──────
+
+test('stopReason=error 结果返回可读失败文案（子会话 id + 原因/指引）', async () => {
+  const { ctx, registered } = makeCtx()
+  ctx.subagents.start = async () => ({
+    id: 'exec-session-fail-1',
+    result: Promise.resolve({
+      stopReason: 'error',
+      output: [],
+    }),
+  })
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  const out = await tool.execute(
+    { prompt: 'task', ...EXEC_MODEL },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.match(
+    out,
+    /\[error\] executor 子代理失败（stopReason=error，见子会话 exec-session-fail-1）/,
+  )
+  assert.match(out, /见子会话日志（常见：模型闸拒绝、深度超限、工具限制）/)
+})
+
+test('stopReason=error 且 result.error.message 存在时原样拼入', async () => {
+  const { ctx, registered } = makeCtx()
+  ctx.subagents.start = async () => ({
+    id: 'exec-session-fail-2',
+    result: Promise.resolve({
+      stopReason: 'error',
+      output: [],
+      error: {
+        message: 'dsh-miopiik-model-auth: 请求未授权模型 opencode-go/hy3（…）',
+      },
+    }),
+  })
+  apply(ctx)
+  const tool = registered.find((t) => t.name === 'mop_spawn_executor')
+  const out = await tool.execute(
+    { prompt: 'task', ...EXEC_MODEL },
+    { agent: { session: { id: 's1' } } },
+  )
+  assert.match(out, /请求未授权模型 opencode-go\/hy3/)
+  assert.match(out, /exec-session-fail-2/)
+})
