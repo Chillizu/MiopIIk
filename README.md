@@ -103,14 +103,14 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 9 插件（聚合 bundle patch）+ `npx dsh-miopiik` 初始化 miopiik preset                                                                                                                                                                                               |
 | [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | 恢复     | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
-| [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，**零默认零兜底**：model+provider 必须显式成对给出，省略/只给一边即抛错，无 Config 默认、不继承调用者；逐次指定 `timeoutMs` 硬超时）                                                                                            |
+| [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，**零默认零兜底**：model+provider 必须显式成对给出，省略/只给一边即抛错，无 Config 默认、不继承调用者；逐次指定 `timeoutMs` 硬超时）                                                                                                   |
 | [`dsh-miopiik-magic-keywords`](packages/dsh-miopiik-magic-keywords/) | hook     | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
-| [`dsh-miopiik-model-auth`](packages/dsh-miopiik-model-auth/)         | 授权闸   | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸；**allowlist 工作区级**（`<workspace>/.dsh/memory/model-allowlist.md`，0.1.8+，跨工作区隔离；Config: `allowlistPath` 可显式覆盖）                                                    |
+| [`dsh-miopiik-model-auth`](packages/dsh-miopiik-model-auth/)         | 授权闸   | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸；**allowlist 工作区级**（`<workspace>/.dsh/memory/model-allowlist.md`，0.1.8+，跨工作区隔离；Config: `allowlistPath` 可显式覆盖）                                                          |
 | [`dsh-miopiik-capabilities`](packages/dsh-miopiik-capabilities/)     | 探测     | `mop_probe_capabilities`（探测 DSH seam 可用性，清单含「在场 / 实调」双证据与环境行 → `.dsh/memory/capabilities.md`）                                                                                                                                                           |
 | [`dsh-miopiik-learn`](packages/dsh-miopiik-learn/)                   | 学习     | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
 | [`dsh-miopiik-run-stats`](packages/dsh-miopiik-run-stats/)           | 遥测     | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
-| [`dsh-miopiik-recall`](packages/dsh-miopiik-recall/)                 | 记忆     | `mop_recall`（会话/工作目录级历史消息检索：流式 zstd 解压扫描 `~/.dsh/sessions` 下本工作目录全部历史会话日志，命中行带时间/会话/角色；`scope=workspace` 默认 / `session` 只扫当前会话；大日志无上限）                                      |
-| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | 记忆     | **里程碑自动检查点**（0.1.13）：根会话每轮关闭由 `agent/turn-stopping` 事件自动追加 `auto-turn` 行到 `.dsh/memory/checkpoints.md`，`agent/error` 记 `auto-error`；同 turn 去重，子代理轮次不写；`mop_checkpoint` 手动显式命名里程碑仍可用且互补 |
+| [`dsh-miopiik-recall`](packages/dsh-miopiik-recall/)                 | 记忆     | `mop_recall`（会话/工作目录级历史消息检索：流式 zstd 解压扫描 `~/.dsh/sessions` 下本工作目录全部历史会话日志，命中行带时间/会话/角色；`scope=workspace` 默认 / `session` 只扫当前会话；大日志无上限）                                                                           |
+| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | 记忆     | **里程碑自动检查点**（0.1.13）：根会话每轮关闭由 `agent/turn-stopping` 事件自动追加 `auto-turn` 行到 `.dsh/memory/checkpoints.md`，`agent/error` 记 `auto-error`；同 turn 去重，子代理轮次不写；`mop_checkpoint` 手动显式命名里程碑仍可用且互补                                 |
 
 ## 工具安全行为与限制
 
@@ -192,15 +192,15 @@ dsh plugin --profile web add \
 
 完整逐版记录见 [CHANGELOG.md](CHANGELOG.md)；缺陷闭环摘要：
 
-| 版本 | 内容 |
-| --- | --- |
-| 0.1.6 | 六缺陷初版验收（子代理模型不可预测 / memory 空转 / 弱模型不守规则），确立回归基线 |
-| 0.1.7 | **零默认零兜底模型契约**：`mop_spawn_executor` 必须显式 `model`+`provider`，无 Config 默认、无继承、无决策文件兜底 |
-| 0.1.8 | **授权收紧为工作区级**：allowlist 迁至 `<workspace>/.dsh/memory/model-allowlist.md`，撤回全部全局授权；recall 首发（D 缺陷发现） |
-| 0.1.9 | B3（授权对闸门即时生效，共享缓存+mtime 失效）、C2（mop_dispatch 迁至 preset 装配）、D（preset 补 recall 行） |
-| 0.1.10 | B1 二轮修复（start 阶段错误回传）+ recall scope=session 前缀归一化（R4c） |
-| 0.1.11 | B1 三轮真因：失败是 `stopReason='error'` 的**成功 resolve** 而非 reject → 正常返回路径显式判定 |
-| 0.1.12 | recall 流式解压，根治 20M+ 大会话 maxBuffer 超限 skip；**四缺陷全数验收 PASS** |
+| 版本   | 内容                                                                                                                                |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1.6  | 六缺陷初版验收（子代理模型不可预测 / memory 空转 / 弱模型不守规则），确立回归基线                                                   |
+| 0.1.7  | **零默认零兜底模型契约**：`mop_spawn_executor` 必须显式 `model`+`provider`，无 Config 默认、无继承、无决策文件兜底                  |
+| 0.1.8  | **授权收紧为工作区级**：allowlist 迁至 `<workspace>/.dsh/memory/model-allowlist.md`，撤回全部全局授权；recall 首发（D 缺陷发现）    |
+| 0.1.9  | B3（授权对闸门即时生效，共享缓存+mtime 失效）、C2（mop_dispatch 迁至 preset 装配）、D（preset 补 recall 行）                        |
+| 0.1.10 | B1 二轮修复（start 阶段错误回传）+ recall scope=session 前缀归一化（R4c）                                                           |
+| 0.1.11 | B1 三轮真因：失败是 `stopReason='error'` 的**成功 resolve** 而非 reject → 正常返回路径显式判定                                      |
+| 0.1.12 | recall 流式解压，根治 20M+ 大会话 maxBuffer 超限 skip；**四缺陷全数验收 PASS**                                                      |
 | 0.1.13 | **里程碑自动检查点**（`dsh-miopiik-checkpoint`）：记忆落盘由 `agent/turn-stopping` 事件驱动，不再依赖 persona 自觉；memory 缺口闭环 |
 
 每版验收证据归档于工作区 `acceptance-*.md`（0.1.8 / 0.1.9 / 0.1.12-FINAL / 0.1.13）。
@@ -219,11 +219,11 @@ dsh plugin --profile web add \
 
 examples/miopiik 的 provider/model 用 YAML 锚点收敛为唯一定义点（真实 Loader 组合测试覆盖）：
 
-| 层                         | 模型                                     | 定义位置                                                    |
-| -------------------------- | ---------------------------------------- | ----------------------------------------------------------- |
-| 审查层（主会话）           | 用户自己的模型路由                       | preset 不干预                                               |
-| 常规子代理 / fork / 监督层 | `&flash-model`（示例 opencode-go/mimo-v2.5） | `tool-subagent` 行 agentOptions（锚点定义处，改一处全跟随） |
-| 规划层                     | `&planner-model`（示例 hy3，与 dispatch 同源） | `tool-subagent-planner` / `tool-subagent-dispatch` 行（唯一手写处） |
-| 执行层                     | **零默认零兜底**：`mop_spawn_executor` 每次调用**必须**显式 `model`+`provider` 成对给出，省略或只给一边即抛错（无 Config 默认、不继承调用者） | per-call 参数；未授权模型由模型闸（`dsh-miopiik-model-auth`）拒发 |
+| 层                         | 模型                                                                                                                                          | 定义位置                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 审查层（主会话）           | 用户自己的模型路由                                                                                                                            | preset 不干预                                                       |
+| 常规子代理 / fork / 监督层 | `&flash-model`（示例 opencode-go/mimo-v2.5）                                                                                                  | `tool-subagent` 行 agentOptions（锚点定义处，改一处全跟随）         |
+| 规划层                     | `&planner-model`（示例 hy3，与 dispatch 同源）                                                                                                | `tool-subagent-planner` / `tool-subagent-dispatch` 行（唯一手写处） |
+| 执行层                     | **零默认零兜底**：`mop_spawn_executor` 每次调用**必须**显式 `model`+`provider` 成对给出，省略或只给一边即抛错（无 Config 默认、不继承调用者） | per-call 参数；未授权模型由模型闸（`dsh-miopiik-model-auth`）拒发   |
 
 换 provider 时改锚点定义处的 `&dsh-provider` 与上述 model 即可；不引入环境变量插值等未证实特性。规划层强模型须先在工作区 `mop_model_authorize` 授权（0.1.8 起授权为工作区级）。
