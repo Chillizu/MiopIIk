@@ -219,7 +219,15 @@ export function apply(ctx, config = {}) {
             if (timedOut) {
               return `[aborted] executor timed out after ${timeoutMs}ms before the child was published`
             }
-            throw error
+            // start 阶段失败（闸/发布/深度限制）：错误原因必须回传（0.1.9 验收 B1 复测：
+            // 闸拒发生在 start 内部，reject error.message 常为空，空 [error] 不可接受）。
+            const msg =
+              error && error.message
+                ? error.message
+                : String(error) === 'Error'
+                  ? '(无错误详情；常见原因为模型闸拒绝、深度超限或工具面限制，见宿主日志)'
+                  : String(error)
+            throw new Error(`executor 子代理启动失败: ${msg}`)
           }
 
           // D29v3 H3-cost 依赖：无论是否截断/超时，始终在返回末尾暴露 executor 子会话 id，
@@ -245,10 +253,15 @@ export function apply(ctx, config = {}) {
           } catch (error) {
             // 子代理未发布成功或会话失败（含模型闸拒绝）：错误原因必须回传调用者，
             // 不能只存在于子会话日志（0.1.8 验收 B1：闸拒文案丢失，工具面只见空 [error]）。
-            const msg = error && error.message ? error.message : String(error)
-            throw new Error(
-              `executor 子代理失败（见子会话 ${run.id}）: ${msg || '(无错误详情)'}`,
-            )
+            // Cordis start 的 reject error 常为空 message（闸文案写在子会话日志），
+            // 故统一兜底为可读文案 + 暴露子会话 id 供查日志。
+            const msg =
+              error && error.message
+                ? error.message
+                : String(error) === 'Error'
+                  ? '(无错误详情；常见原因为模型闸拒绝或深度/工具限制，见宿主日志与子会话日志)'
+                  : String(error)
+            throw new Error(`executor 子代理失败（见子会话 ${run.id}）: ${msg}`)
           }
 
           // timer 已触发时优先报 timeout：provider 若正确桥接 abort，run.result 会

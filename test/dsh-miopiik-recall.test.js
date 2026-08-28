@@ -205,3 +205,29 @@ test('mop_recall 忽略非消息事件（tool 事件不参与匹配）', async (
   assert.match(out, /matched=1/)
   assert.doesNotMatch(out, /不该被 recall/)
 })
+
+test('mop_recall scope=session 容忍带 session- 前缀的完整 SessionId（R4c 回归）', async (t) => {
+  if (!(await hasZstd())) return t.skip('zstd CLI 不可用')
+  const root = await mkdtemp(join(tmpdir(), 'recall-'))
+  await makeSessionDir(root, SESSION_A, [
+    ev(
+      'assistant/message',
+      '2026-08-01T00:01:00.000Z',
+      '前缀会话含 needle-pfx',
+    ),
+  ])
+  await makeSessionDir(root, SESSION_B, [
+    ev('assistant/message', '2026-08-02T00:01:00.000Z', '他会话含 needle-pfx'),
+  ])
+  const { ctx, registered } = makeCtx()
+  apply(ctx, { sessionsRoot: root })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  // header.id 用生产形态：带 'session-' 前缀的完整 id——0.1.9 验收 R4c 恒空现场。
+  const out = await tool.execute(
+    { query: 'needle-pfx', scope: 'session' },
+    { agent: { session: { header: { id: SESSION_A, cwd: CWD } } } },
+  )
+  assert.match(out, /scanned=1, matched=1, skipped=0/)
+  assert.match(out, /前缀会话含 needle-pfx/)
+  assert.doesNotMatch(out, /他会话含 needle-pfx/)
+})

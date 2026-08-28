@@ -171,11 +171,15 @@ export function apply(ctx, config = {}) {
         const scope = args.scope === 'session' ? 'session' : 'workspace'
 
         const files = await sessionFiles(cwdDir)
+        // id 归一化：目录名 session-<uuid> 解析出的 sessionId 已去前缀，
+        // 而 header.id/session.id 常为带 'session-' 前缀的完整 SessionId——
+        // 严格相等会永不命中（0.1.9 验收 R4c：scope=session 恒空）。
+        const normId = (id) => String(id || '').replace(/^session-/, '')
         const currentId =
           (header && (header.id || header.sessionId)) || (session && session.id)
         const targets =
           scope === 'session'
-            ? files.filter((f) => f.sessionId === currentId)
+            ? files.filter((f) => f.sessionId === normId(currentId))
             : files
 
         let matched = 0

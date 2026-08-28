@@ -3,6 +3,13 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.10] - 2026-08-28
+
+### Fixed
+
+- `dsh-miopiik-executor`：**闸门拒绝原因回到调用者（0.1.9 验收 B1 复测仍 FAIL 的根因修复）**——0.1.9 只包住了 `run.result` 错误，实测闸拒发生在 `subagents.start()` 内部（子代理发布前），且 Cordis 包装的 reject error 常为空 message。现在 **start() 与 run.result 两个阶段都捕获**并构造可读错误（含子会话 id；空 message 时给出「无错误详情，常见原因为模型闸拒绝/深度超限」指引），工具结果不再出现空 `[error]`。
+- `dsh-miopiik-recall`：**scope=session 恒空修复（0.1.9 验收 R4c）**——`sessionFiles` 解析出的 sessionId 已去 `session-` 前缀，而 `header.id/session.id` 为带前缀的完整 SessionId，严格相等永不命中。改为归一化比较（双方去前缀），并补带前缀形态的回归测试。
+
 ## [0.1.9] - 2026-08-27
 
 ### Fixed
