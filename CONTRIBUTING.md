@@ -34,7 +34,10 @@
    `npm version <x.y.z> --workspaces --no-git-tag-version && git commit -am "chore(release): v<x.y.z>"`;
 2. 更新 `CHANGELOG.md`；
 3. 打 tag 并推送：`git tag v<x.y.z> && git push origin main v<x.y.z>`；
-4. CI（release.yml）校验版本与 tag 一致后先发 9 个子包、最后发 meta 包，并出 Release 草稿。
-   未配 `NPM_TOKEN` secret 时只出草稿不发布（首发由维护者本机手动 `npm publish`）。
+4. 本地逐包发布（9 子包在前、meta 包最后）：
+   `for p in packages/dsh-miopiik-*; do (cd $p && npm publish --access public); done && (cd packages/dsh-miopiik && npm publish --access public)`；
+5. 出 GitHub Release（草稿或正式均可）：`gh release create v<x.y.z> --generate-notes`。
+
+> 注：自动发布 workflow（release.yml）因 GitHub workflow 文件解析问题从未生效，已于 0.1.13 移除；发布保持维护者本机手动执行。若日后需要自动化：重写 workflow 时注意先验证文件被 Actions 接受（`actions/workflows` API 列出且 name 正常），再打 tag 触发。
 
 0.x 阶段允许 BREAKING CHANGE（minor 位）；1.0 后遵循 SemVer。
