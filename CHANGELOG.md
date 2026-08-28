@@ -3,6 +3,16 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [0.1.12] - 2026-08-28
+
+### Fixed
+
+- `dsh-miopiik-recall`：**流式解压扫描，根治大会话超限 skip（0.1.11 冒烟实测）**——工作区历史中含 20M+ 的 `.jsonl.zstd` 大会话，原 `execFile` 64MB `maxBuffer` 整文件缓冲导致 `stdout maxBuffer length exceeded` 被 skip。改为 `zstd` 子进程管道 + readline 逐行扫描，命中即收、达上限即 kill，内存只驻留命中行；`maxLines` 提前终止行为新增测试覆盖。`mop_recall` 现可检索任意大小的历史会话。
+
+### 备注
+
+- 0.1.11 的 B1 修复（stopReason=error 判定）已发布但尚未加载验证：需重启 DSH web 后复测。
+
 ## [0.1.11] - 2026-08-28
 
 ### Fixed

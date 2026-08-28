@@ -1,15 +1,13 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
-import { execFile } from 'node:child_process'
+import { spawn } from 'node:child_process'
+import { createInterface } from 'node:readline'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { promisify } from 'node:util'
 
 export const name = 'dsh-miopiik-recall'
 export const inject = ['tools']
-
-const execFileAsync = promisify(execFile)
 
 // 会话日志根：~/.dsh/sessions/<cwd-slug>/session-<uuid>/session.jsonl.zstd
 // slug 规则与 DSH 一致：路径段以 '-' 连接，整体包 '--'，如 /home/a/b → --home-a-b--。
@@ -60,11 +58,74 @@ export function apply(ctx, config = {}) {
   const maxLines = config.maxLines ?? DEFAULT_MAX_LINES
   const lineChars = config.lineChars ?? DEFAULT_LINE_CHARS
 
-  async function decompress(file) {
-    const { stdout } = await execFileAsync(zstdBin, ['-d', '-c', file], {
-      maxBuffer: 64 * 1024 * 1024,
+  // 流式解压扫描：zstd 子进程管道逐行处理，命中即收集、达到上限即 kill——
+  // 不整文件缓冲（0.1.11 冒烟实测：20M+ 大会话解压超 execFile 64MB maxBuffer 被 skip）。
+  async function scanFile(file, query, lower, needle, limit) {
+    let proc
+    try {
+      proc = spawn(zstdBin, ['-d', '-c', file], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+    } catch (error) {
+      return {
+        skipped: 1,
+        error:
+          error && error.message
+            ? String(error.message).slice(0, 120)
+            : String(error),
+      }
+    }
+    let stderr = ''
+    proc.stderr.on('data', (c) => {
+      stderr = (stderr + String(c)).slice(-400)
     })
-    return stdout
+    const hits = []
+    try {
+      const rl = createInterface({ input: proc.stdout })
+      for await (const line of rl) {
+        const t = line.trim()
+        if (!t) continue
+        let ev
+        try {
+          ev = JSON.parse(t)
+        } catch {
+          continue
+        }
+        if (ev.type !== 'user/message' && ev.type !== 'assistant/message')
+          continue
+        const text = messageText(ev.data)
+        if (!text) continue
+        const matched = lower
+          ? text.toLowerCase().includes(needle)
+          : text.includes(query)
+        if (!matched) continue
+        hits.push({ time: ev.time, type: ev.type, text })
+        if (hits.length >= limit) {
+          proc.kill('SIGTERM')
+          break
+        }
+      }
+      await new Promise((resolve) => {
+        proc.on('close', resolve)
+        proc.on('error', resolve)
+      })
+    } catch (error) {
+      if (proc && typeof proc.kill === 'function') proc.kill('SIGTERM')
+      return {
+        skipped: 1,
+        error:
+          error && error.message
+            ? String(error.message).slice(0, 120)
+            : String(error),
+      }
+    }
+    if (stderr.trim() && hits.length === 0) {
+      return {
+        skipped: 1,
+        error: stderr.trim().slice(0, 120),
+      }
+    }
+    return { hits, skipped: 0, error: null }
   }
 
   async function sessionFiles(cwdDir) {
@@ -90,42 +151,6 @@ export function apply(ctx, config = {}) {
     }
     out.sort((a, b) => (a.sessionId < b.sessionId ? -1 : 1))
     return out
-  }
-
-  async function scanFile(file, query, lower, needle) {
-    let raw
-    try {
-      raw = await decompress(file)
-    } catch (error) {
-      return {
-        skipped: 1,
-        error:
-          error && error.message
-            ? String(error.message).slice(0, 120)
-            : String(error),
-      }
-    }
-    const hits = []
-    for (const line of raw.split('\n')) {
-      const t = line.trim()
-      if (!t) continue
-      let ev
-      try {
-        ev = JSON.parse(t)
-      } catch {
-        continue
-      }
-      if (ev.type !== 'user/message' && ev.type !== 'assistant/message')
-        continue
-      const text = messageText(ev.data)
-      if (!text) continue
-      const matched = lower
-        ? text.toLowerCase().includes(needle)
-        : text.includes(query)
-      if (!matched) continue
-      hits.push({ time: ev.time, type: ev.type, text })
-    }
-    return { hits, skipped: 0, error: null }
   }
 
   ctx.tools.register(
@@ -187,7 +212,7 @@ export function apply(ctx, config = {}) {
         let skippedError = null
         const out = []
         for (const t of targets) {
-          const r = await scanFile(t.file, query, lower, needle)
+          const r = await scanFile(t.file, query, lower, needle, limit)
           if (r.skipped) {
             skipped += 1
             skippedError = r.error

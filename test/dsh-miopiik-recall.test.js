@@ -231,3 +231,27 @@ test('mop_recall scope=session 容忍带 session- 前缀的完整 SessionId（R4
   assert.match(out, /前缀会话含 needle-pfx/)
   assert.doesNotMatch(out, /他会话含 needle-pfx/)
 })
+
+test('mop_recall 达到 maxLines 提前终止并标注 truncated', async (t) => {
+  if (!(await hasZstd())) return t.skip('zstd CLI 不可用')
+  const root = await mkdtemp(join(tmpdir(), 'recall-'))
+  const lines = Array.from({ length: 20 }, (_, i) =>
+    ev(
+      'assistant/message',
+      `2026-08-01T00:0${i % 10}:00.000Z`,
+      `needle-line-${i}`,
+    ),
+  )
+  await makeSessionDir(root, SESSION_A, lines)
+  const { ctx, registered } = makeCtx()
+  apply(ctx, { sessionsRoot: root })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'needle-line', maxLines: 5 },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+  assert.match(out, /matched=5/)
+  assert.match(out, /truncated at 5 lines/)
+  assert.match(out, /needle-line-4/)
+  assert.doesNotMatch(out, /needle-line-9/)
+})
