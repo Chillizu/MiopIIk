@@ -28,13 +28,13 @@
 
 ## 版本策略（lockstep）
 
-7 个插件包 + 套件包 `dsh-miopiik` 同号同发：
+9 个插件包 + 套件包 `dsh-miopiik` 同号同发：
 
 1. 发版前把全部 workspace `version` 改成同一号（meta 包依赖用 `^` range，无需逐包改）：
    `npm version <x.y.z> --workspaces --no-git-tag-version && git commit -am "chore(release): v<x.y.z>"`;
 2. 更新 `CHANGELOG.md`；
 3. 打 tag 并推送：`git tag v<x.y.z> && git push origin main v<x.y.z>`；
-4. CI（release.yml）校验版本与 tag 一致后先发 7 个子包、最后发 meta 包，并出 Release 草稿。
+4. CI（release.yml）校验版本与 tag 一致后先发 9 个子包、最后发 meta 包，并出 Release 草稿。
    未配 `NPM_TOKEN` secret 时只出草稿不发布（首发由维护者本机手动 `npm publish`）。
 
 0.x 阶段允许 BREAKING CHANGE（minor 位）；1.0 后遵循 SemVer。

@@ -1,7 +1,18 @@
 # Changelog
 
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 SemVer，7 个插件包 + 套件包 + recall 包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+版本号遵循 SemVer，9 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+
+## [0.1.13] - 2026-08-28
+
+### Added
+
+- `dsh-miopiik-checkpoint`（新包，套件第 9 插件）：**里程碑自动检查点**——根会话（`delegationDepth=0`）每轮关闭时由 `agent/turn-stopping` 事件自动追加 `auto-turn` 行到 `.dsh/memory/checkpoints.md`（ISO 时间 / session / turn / 本轮 user 消息摘要，120 字符截断）；`agent/error` 事件记 `auto-error` 行；同 turn 多次触发（steer 重读）去重。记忆落盘由**结构事件驱动**，不再依赖 persona 自觉调 `mop_checkpoint`（弱模型不守提示词规则是初版反馈核心）；`mop_checkpoint` 保留为显式命名里程碑。子代理轮次不落盘（防 executor 高频轮次冲成噪音）。
+- meta `dsh-miopiik`：聚合 patch 8→9 行；preset 新增 `dsh-miopiik-checkpoint` 行；persona checkpoint 文案随自动落盘机制更新（review.prompt.md 定稿源同步）。
+
+### 备注
+
+- 生产验证：重启后首个关闭轮次自动落盘第 1 条 auto-turn（session / turn / user 摘要与当前会话日志逐字吻合）。
 
 ## [0.1.12] - 2026-08-28
 
