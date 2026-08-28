@@ -1,9 +1,9 @@
 name: Release
 
-# push tag v* → 校验 lockstep 版本与 tag 一致 → npm 发布（先 7 子包、最后 meta 包）
+# push tag v* → 校验 lockstep 版本与 tag 一致 → npm 发布（先 9 子包、最后 meta 包）
 # + GitHub Release 草稿。
 #
-# 版本策略（CONTRIBUTING「版本策略」）：7 个插件包 + 套件包 dsh-miopiik 采用
+# 版本策略（CONTRIBUTING「版本策略」）：9 个插件包 + 套件包 dsh-miopiik 采用
 # lockstep——发版前在本地把全部 workspace 的 version 改成同一号并提交，再打 tag：
 #   npm version <x.y.z> --workspaces && git push --follow-tags
 #
@@ -57,7 +57,7 @@ jobs:
             console.log("all workspaces at " + process.env.WANT);
           '
 
-      - name: Publish seven plugins, then the meta package
+      - name: Publish nine plugins, then the meta package
         if: ${{ secrets.NPM_TOKEN != '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -65,7 +65,8 @@ jobs:
           for p in dsh-miopiik-tool-recovery dsh-miopiik-executor \
                    dsh-miopiik-magic-keywords dsh-miopiik-model-auth \
                    dsh-miopiik-capabilities dsh-miopiik-learn \
-                   dsh-miopiik-run-stats; do
+                   dsh-miopiik-run-stats dsh-miopiik-recall \
+                   dsh-miopiik-checkpoint; do
             npm publish --workspace "packages/$p" || \
               { echo "publish failed: $p (already exists?)"; exit 1; }
           done
