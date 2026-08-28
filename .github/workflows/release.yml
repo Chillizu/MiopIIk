@@ -11,9 +11,10 @@ name: Release
 # 配好 NPM_TOKEN secret 后本通道自动生效（未配 token 时发布步骤跳过，只出 Release 草稿）。
 # meta 包依赖子包用 ^range，lockstep 下无需逐包改依赖版本；发布顺序保证子包先存在。
 
-on:
+"on":
   push:
-    tags: ['v*']
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -22,12 +23,14 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: https://registry.npmjs.org
       - name: Install dependencies
         run: npm ci --include=dev
       - name: Gates (check/lint/format/crossrefs/test)
@@ -37,7 +40,6 @@ jobs:
           npm run format:check
           bash tools/verify-crossrefs.sh
           npm test
-
       - name: Verify lockstep versions match the tag
         run: |
           WANT="${GITHUB_REF_NAME#v}"
@@ -56,7 +58,6 @@ jobs:
             }
             console.log("all workspaces at " + process.env.WANT);
           '
-
       - name: Publish nine plugins, then the meta package
         if: ${{ secrets.NPM_TOKEN != '' }}
         env:
@@ -71,7 +72,6 @@ jobs:
               { echo "publish failed: $p (already exists?)"; exit 1; }
           done
           npm publish --workspace packages/dsh-miopiik
-
       - name: Draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
